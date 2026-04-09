@@ -1,0 +1,39 @@
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# IDE
+.idea/
+.vs/
+.vscode/
+*.swp
+*.swo
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.egg-info/
+
+# Node
+node_modules/
+package-lock.json
+bun.lock
+
+# Sensitive
+.credentials.json
+.env
+.env.*
+*.key
+*.pem
+*.token
+
+# Cache / Temp
+*.log
+*.tmp
+*.bak
+*.cache
+
+# Model-specific configs
+opencode.minimax.json

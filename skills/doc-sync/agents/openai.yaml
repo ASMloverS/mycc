@@ -1,0 +1,4 @@
+interface:
+  display_name: "Doc Sync"
+  short_description: "Sync docs with repository facts"
+  default_prompt: "Use $doc-sync to check documentation drift, apply only safe path fixes, and output a compact report."
