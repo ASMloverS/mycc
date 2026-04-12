@@ -4,8 +4,10 @@
 import argparse
 import datetime
 import os
+import re
 import shutil
 import sys
+import unicodedata
 from pathlib import Path
 
 try:
@@ -59,7 +61,7 @@ CAT_LABELS = {
     "agents": "Agents",
     "commands": "Commands",
     "skills": "Skills",
-    "config": "Config",
+    "config": "配置文件",
 }
 CAT_COLORS = {
     "agents": "\033[36m",
@@ -110,6 +112,20 @@ def load_config():
 
 # --- Keyboard Input ---
 
+_KEY_MAP_COMMON = {
+    "\r": "enter",
+    "\n": "enter",
+    " ": "space",
+    "q": "q",
+    "Q": "q",
+    "y": "y",
+    "Y": "y",
+    "n": "n",
+    "N": "n",
+}
+_KEY_MAP_WIN_EXT = {"H": "up", "P": "down", "K": "left", "M": "right"}
+_KEY_MAP_LINUX_CSI = {"A": "up", "B": "down", "D": "left", "C": "right"}
+
 
 def _get_key_windows():
     import msvcrt
@@ -117,26 +133,8 @@ def _get_key_windows():
     ch = msvcrt.getwch()
     if ch in ("\x00", "\xe0"):
         ch2 = msvcrt.getwch()
-        if ch2 == "H":
-            return "up"
-        if ch2 == "P":
-            return "down"
-        if ch2 == "K":
-            return "left"
-        if ch2 == "M":
-            return "right"
-        return f"special:{ch2}"
-    if ch == "\r":
-        return "enter"
-    if ch == " ":
-        return "space"
-    if ch in ("q", "Q"):
-        return "q"
-    if ch in ("y", "Y"):
-        return "y"
-    if ch in ("n", "N"):
-        return "n"
-    return ch
+        return _KEY_MAP_WIN_EXT.get(ch2, f"special:{ch2}")
+    return _KEY_MAP_COMMON.get(ch, ch)
 
 
 def _get_key_linux():
@@ -152,27 +150,9 @@ def _get_key_linux():
             ch2 = sys.stdin.read(1)
             if ch2 == "[":
                 ch3 = sys.stdin.read(1)
-                if ch3 == "A":
-                    return "up"
-                if ch3 == "B":
-                    return "down"
-                if ch3 == "D":
-                    return "left"
-                if ch3 == "C":
-                    return "right"
-                return f"esc[{ch3}"
+                return _KEY_MAP_LINUX_CSI.get(ch3, f"esc[{ch3}")
             return f"esc:{ch2}"
-        if ch in ("\r", "\n"):
-            return "enter"
-        if ch == " ":
-            return "space"
-        if ch in ("q", "Q"):
-            return "q"
-        if ch in ("y", "Y"):
-            return "y"
-        if ch in ("n", "N"):
-            return "n"
-        return ch
+        return _KEY_MAP_COMMON.get(ch, ch)
     finally:
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
@@ -190,46 +170,7 @@ def _term_height():
         return 24
 
 
-def _cur_pos():
-    sys.stdout.write("\033[6n")
-    sys.stdout.flush()
-    buf = ""
-    while True:
-        ch = sys.stdin.read(1)
-        buf += ch
-        if ch == "R":
-            break
-    try:
-        rows, cols = buf.lstrip("\x1b[").rstrip("R").split(";")
-        return int(rows), int(cols)
-    except Exception:
-        return None, None
-
-
-def _get_cursor_row():
-    if sys.platform == "win32":
-        import ctypes
-
-        h = ctypes.windll.kernel32.GetStdHandle(-11)
-        csbi = ctypes.create_string_buffer(22)
-        ctypes.windll.kernel32.GetConsoleScreenBufferInfo(h, csbi)
-        row = int.from_bytes(csbi.raw[4:8], "little")
-        return row
-    try:
-        import termios
-
-        fd = sys.stdin.fileno()
-        old = termios.tcgetattr(fd)
-        try:
-            import tty
-
-            tty.setraw(fd)
-            row, _ = _cur_pos()
-            return row
-        finally:
-            termios.tcsetattr(fd, termios.TCSADRAIN, old)
-    except Exception:
-        return None
+_ANSI_RE = re.compile(r"\033\[[0-9;]*m")
 
 
 def emoji_checkbox(
@@ -242,7 +183,6 @@ def emoji_checkbox(
     visible_rows = max(_term_height() - 4, 5)
     scroll_top = 0
     prev_lines = 0
-    anchor_row = _get_cursor_row()
     while True:
         if cursor < scroll_top:
             scroll_top = cursor
@@ -368,7 +308,7 @@ def _fmt_size(n):
 
 
 def _item_detail(path, src_key, sources, src_labels):
-    kind = "Dir" if path.is_dir() else "File"
+    kind = "目录" if path.is_dir() else "文件"
     if path.is_dir():
         total = sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
     else:
@@ -401,36 +341,52 @@ def interactive_select(categories, sources, src_labels):
     return [label_map[c] for c in chosen]
 
 
-def _strip_ansi(s):
-    import re
+def _strwidth(s):
+    w = 0
+    for ch in s:
+        eaw = unicodedata.east_asian_width(ch)
+        w += 2 if eaw in ("W", "F") else 1
+    return w
 
-    return re.sub(r"\033\[[0-9;]*m", "", s)
+
+TABLE_HEADERS = ["类别", "名称", "类型", "目标路径"]
+
+
+def _build_table_row(src, cat, rel_dst):
+    c = CAT_COLORS.get(cat, "")
+    return [
+        f"{c}{CAT_LABELS[cat]}{RST}",
+        str(src.name),
+        "目录" if src.is_dir() else "文件",
+        rel_dst,
+    ]
+
+
+def _strip_ansi(s):
+    return _ANSI_RE.sub("", s)
 
 
 def _print_table(rows, headers):
-    col_count = len(headers)
-    widths = [len(h) for h in headers]
+    widths = [_strwidth(h) for h in headers]
     stripped = []
     for row in rows:
         srow = []
         for j, cell in enumerate(row):
             sc = _strip_ansi(cell)
             srow.append(sc)
-            widths[j] = max(widths[j], len(sc))
+            widths[j] = max(widths[j], _strwidth(sc))
         stripped.append(srow)
-    sep = "┼".join("─" * (w + 2) for w in widths)
-    top = "┌" + "┬".join("─" * (w + 2) for w in widths) + "┐"
-    bot = "└" + "┴".join("─" * (w + 2) for w in widths) + "┘"
-    mid = "├" + sep + "┤"
+    hline = lambda l, r, j: l + j.join("─" * (w + 2) for w in widths) + r
+    top, mid, bot = hline("┌", "┬", "┐"), hline("├", "┼", "┤"), hline("└", "┴", "┘")
 
     def fmt(cells, colored=None):
         parts = []
         for j, sc in enumerate(cells):
-            pad = widths[j] - len(sc)
+            pad = " " * (widths[j] - _strwidth(sc))
             if colored and j < len(colored):
-                parts.append(f" {colored[j]}{' ' * pad}{RST} ")
+                parts.append(f" {colored[j]}{pad}{RST} ")
             else:
-                parts.append(f" {sc}{' ' * pad} ")
+                parts.append(f" {sc}{pad} ")
         return "│" + "│".join(parts) + "│"
 
     print(f"\n  {top}")
@@ -450,17 +406,9 @@ def _confirm(selected, sources):
             rel_dst = str(dst.relative_to(cwd))
         except ValueError:
             rel_dst = str(dst)
-        c = CAT_COLORS.get(cat, "")
-        rows.append(
-            [
-                f"{c}{CAT_LABELS[cat]}{RST}",
-                str(src.name),
-                "Dir" if src.is_dir() else "File",
-                rel_dst,
-            ]
-        )
+        rows.append(_build_table_row(src, cat, rel_dst))
     print(f"\n即将拷贝 {len(selected)} 项:")
-    _print_table(rows, ["Category", "Name", "Type", "Target"])
+    _print_table(rows, TABLE_HEADERS)
     return custom_confirm("确认执行？", default=True)
 
 
@@ -478,7 +426,7 @@ def copy_items(selected, dry_run=False):
     for src, cat in selected:
         dst = get_target(src, cat)
         targets.append((src, cat, dst))
-        kind = "Dir" if src.is_dir() else "File"
+        kind = "目录" if src.is_dir() else "文件"
         print(f"{tag}拷贝{kind}: {src} -> {dst}")
         if dry_run:
             continue
@@ -492,21 +440,13 @@ def copy_items(selected, dry_run=False):
     cwd = Path.cwd()
     rows = []
     for src, cat, dst in targets:
-        c = CAT_COLORS.get(cat, "")
         try:
             rel_dst = str(dst.relative_to(cwd))
         except ValueError:
             rel_dst = str(dst)
-        rows.append(
-            [
-                f"{c}{CAT_LABELS[cat]}{RST}",
-                str(src.name),
-                "Dir" if src.is_dir() else "File",
-                rel_dst,
-            ]
-        )
+        rows.append(_build_table_row(src, cat, rel_dst))
     print(f"\n{tag}已拷贝 {len(selected)} 项:")
-    _print_table(rows, ["Category", "Name", "Type", "Target"])
+    _print_table(rows, TABLE_HEADERS)
 
 
 def main():
