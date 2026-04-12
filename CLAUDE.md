@@ -1,38 +1,26 @@
-# CLAUDE.md
+# User-Level CLAUDE.md
 
-## Edit Protocol
+## Precision Editing Protocol
 
-### Read
-- Grep target → Read w/ offset/limit (≤300 lines).
-- Line 1 only if full survey needed.
-- ±20 lines around target pre-edit.
+### Read: Locate-Window-Verify
+- Grep target first → Read with offset/limit (max 300 lines).
+- Never read from line 1 unless full survey needed.
+- Include ±20 lines around target before editing.
 
-### Write
-- ≤100 lines/Edit.
-- Larger → Edit-Verify cycle:
+### Write: 100-Line Rule
+- Max **100 lines** per Edit/Write.
+- Larger changes → **Edit-Verify** cycle:
   1. Sub-change (≤100 lines).
-  2. Syntax check → Language Checks below.
+  2. Syntax/build check (`cmake --build build`, `g++ -fsyntax-only`).
   3. Repeat.
-- 1000+ line rename → `.patch`/`sed`.
-
-### Lang Checks
-- C/C++: `g++ -fsyntax-only <file>` / `cmake --build build`
-- Rust: `cargo check`
-- Go: `go build ./...` / `go vet ./...`
-- Python: `python -m py_compile <file>` / `ruff check`
-- TS/JS: `npx tsc --noEmit` / `npm run lint`
-- Java: `mvn compile` / `gradle compileJava`
-- C#: `dotnet build`
-- Swift: `swift build`
-- Kotlin: `kotlinc <file>` / `gradle compileKotlin`
-- Ruby: `ruby -c <file>`
-- Shell: `shellcheck <file>`
-- Zig: `zig build`
-- Match project toolchain. Skip if none.
+- 1000+ line renames → `.patch` or `sed`, not Edit.
 
 ### Forbidden
-- 1 fn per Edit.
-- Grep/Read before overwrite.
+- No mega-edits: multiple fns in one Edit call.
+- No blind overwrites: Grep/Read before writing.
 
-## Git
-- No `Co-Authored-By: Claude ...` in commits.
+## Git Commit Convention
+- Never append `Co-Authored-By: Claude ...` to commit messages.
+# graphify
+- **graphify** (`~/.claude/skills/graphify/SKILL.md`) - any input to knowledge graph. Trigger: `/graphify`
+When the user types `/graphify`, invoke the Skill tool with `skill: "graphify"` before doing anything else.

@@ -79,21 +79,18 @@ def scan_sources():
                 cats["agents"].append((p, src_key))
             for p in _iter_items(src_root / "commands"):
                 cats["commands"].append((p, src_key))
-            for name in ["CLAUDE.md", "settings.json"]:
-                fp = src_root / name
-                if fp.exists() and fp.name not in SKIP:
-                    cats["config"].append((fp, src_key))
-        sk_dir = src_root / "skills"
-        if sk_dir.exists():
-            for p in _iter_items(sk_dir):
-                cats["skills"].append((p, src_key))
-        if src_key == "opencode":
-            for p in src_root.glob("opencode*.json"):
-                if p.name not in SKIP:
-                    cats["config"].append((p, src_key))
-            pkg = src_root / "package.json"
-            if pkg.exists():
-                cats["config"].append((pkg, src_key))
+            fp = src_root / "CLAUDE.md"
+            if fp.exists():
+                cats["config"].append((fp, src_key))
+        elif src_key == "agents":
+            sk_dir = src_root / "skills"
+            if sk_dir.exists():
+                for p in _iter_items(sk_dir):
+                    cats["skills"].append((p, src_key))
+        elif src_key == "opencode":
+            ag = src_root / "AGENTS.md"
+            if ag.exists():
+                cats["config"].append((ag, src_key))
     return cats
 
 
@@ -129,23 +126,25 @@ def get_target(src_path, category):
 
 
 def copy_items(selected, dry_run=False):
-    copied = 0
+    tag = "[DRY RUN] " if dry_run else ""
+    targets = []
     for src, cat in selected:
         dst = get_target(src, cat)
-        tag = "[DRY RUN] " if dry_run else ""
+        targets.append(dst)
+        kind = "目录" if src.is_dir() else "文件"
+        print(f"{tag}拷贝{kind}: {src} -> {dst}")
+        if dry_run:
+            continue
         if src.is_dir():
-            print(f"{tag}拷贝目录: {src} -> {dst}")
-            if not dry_run:
-                if dst.exists():
-                    shutil.rmtree(dst)
-                shutil.copytree(src, dst)
+            if dst.exists():
+                shutil.rmtree(dst)
+            shutil.copytree(src, dst)
         else:
-            print(f"{tag}拷贝文件: {src} -> {dst}")
-            if not dry_run:
-                dst.parent.mkdir(parents=True, exist_ok=True)
-                shutil.copy2(src, dst)
-        copied += 1
-    print(f"\n{'[DRY RUN] ' if dry_run else ''}完成: {copied} 项")
+            dst.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, dst)
+    print(f"\n{tag}已拷贝 {len(selected)} 项:")
+    for dst in targets:
+        print(f"  - {dst}")
 
 
 def main():

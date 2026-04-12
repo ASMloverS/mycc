@@ -26,14 +26,15 @@ Doubt → keep.
 ## Workflow
 
 ```
-1. Read src doc.
-2. Pick route:
-   a. --en set        → read references/style-en.md → EN caveman.
-   b. src = CN        → read references/style-cn.md → 文言文.
-   c. other           → caveman in that lang.
+1. Read src doc → 记 `(End of file - total N lines)` → `old_lines`.
+2. Route:
+   a. --en     → read references/style-en.md → EN caveman.
+   b. src = CN → read references/style-cn.md → 文言文.
+   c. other    → caveman in that lang.
 3. Rewrite per style guide.
 4. Write back to src file.
-5. Report: Updated <file>: <old> → <new> lines.
+5. Re-read file → 记 `(End of file - total N lines)` → `new_lines`.
+6. Report: `Updated <file>: old_lines → new_lines`.
 ```
 
 ## Intensity

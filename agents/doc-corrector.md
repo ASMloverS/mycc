@@ -14,6 +14,7 @@ Doc corrector. Invoke `doc-sync` skill immediately — defines full workflow.
 - Remove content only if confirmed absent via grep/read.
 - Uncertain → `<!-- TODO: verify -->`, not delete.
 - No `git commit` or `push`.
+- Docs only. No src/test/config edits — ever.
 - Final summary in session language.
 
 ## Compression
