@@ -7,13 +7,15 @@ import os
 import re
 import shutil
 import sys
+import types
 import unicodedata
+from collections.abc import Callable, Iterator
 from pathlib import Path
 
 try:
     import yaml
 except ImportError:
-    yaml = None
+    yaml: types.ModuleType | None = None
 
 HOME = Path.home()
 
@@ -72,7 +74,7 @@ CAT_COLORS = {
 RST = "\033[0m"
 
 
-def _enable_vt100():
+def _enable_vt100() -> None:
     if sys.platform != "win32":
         return
     import ctypes
@@ -84,7 +86,7 @@ def _enable_vt100():
     k.SetConsoleMode(h, m.value | 0x0004)
 
 
-def load_config():
+def load_config() -> tuple[dict[str, Path], dict[str, str], set[str]]:
     script_dir = Path(__file__).resolve().parent
     config_path = script_dir / "sync_config.yaml"
     sources = dict(DEFAULT_SOURCES)
@@ -127,7 +129,7 @@ _KEY_MAP_WIN_EXT = {"H": "up", "P": "down", "K": "left", "M": "right"}
 _KEY_MAP_LINUX_CSI = {"A": "up", "B": "down", "D": "left", "C": "right"}
 
 
-def _get_key_windows():
+def _get_key_windows() -> str:
     import msvcrt
 
     ch = msvcrt.getwch()
@@ -137,7 +139,7 @@ def _get_key_windows():
     return _KEY_MAP_COMMON.get(ch, ch)
 
 
-def _get_key_linux():
+def _get_key_linux() -> str:
     import termios
     import tty
 
@@ -157,13 +159,15 @@ def _get_key_linux():
         termios.tcsetattr(fd, termios.TCSADRAIN, old)
 
 
-get_key = _get_key_windows if sys.platform == "win32" else _get_key_linux
+get_key: Callable[[], str] = (
+    _get_key_windows if sys.platform == "win32" else _get_key_linux
+)
 
 
 # --- Emoji Checkbox ---
 
 
-def _term_height():
+def _term_height() -> int:
     try:
         return os.get_terminal_size().lines
     except OSError:
@@ -174,8 +178,9 @@ _ANSI_RE = re.compile(r"\033\[[0-9;]*m")
 
 
 def emoji_checkbox(
-    items, message="选择要拷贝的项目 (↑↓移动, 空格切换, 回车确认, q退出)"
-):
+    items: list[str],
+    message: str = "选择要拷贝的项目 (↑↓移动, 空格切换, 回车确认, q退出)",
+) -> list[str]:
     if not items:
         return []
     cursor = 0
@@ -231,7 +236,7 @@ def emoji_checkbox(
 # --- Custom Confirm ---
 
 
-def custom_confirm(message="确认执行？", default=True):
+def custom_confirm(message: str = "确认执行？", default: bool = True) -> bool:
     opts = ["✅ 是", "❌ 否"]
     cursor = 0 if default else 1
     prev_lines = 0
@@ -265,7 +270,7 @@ def custom_confirm(message="确认执行？", default=True):
 # --- Scanning ---
 
 
-def _iter_items(directory, skip):
+def _iter_items(directory: Path, skip: set[str]) -> Iterator[Path]:
     if not directory.exists():
         return
     for p in directory.iterdir():
@@ -274,7 +279,9 @@ def _iter_items(directory, skip):
         yield p
 
 
-def scan_sources(sources, skip):
+def scan_sources(
+    sources: dict[str, Path], skip: set[str]
+) -> dict[str, list[tuple[Path, str]]]:
     cats = {"agents": [], "commands": [], "skills": [], "config": []}
     for src_key, src_root in sources.items():
         if not src_root.exists():
@@ -299,7 +306,7 @@ def scan_sources(sources, skip):
     return cats
 
 
-def _fmt_size(n):
+def _fmt_size(n: float) -> str:
     for unit in ("B", "KB", "MB", "GB"):
         if n < 1024:
             return f"{n:.0f}{unit}" if unit == "B" else f"{n:.1f}{unit}"
@@ -307,7 +314,9 @@ def _fmt_size(n):
     return f"{n:.1f}TB"
 
 
-def _item_detail(path, src_key, sources, src_labels):
+def _item_detail(
+    path: Path, src_key: str, sources: dict[str, Path], src_labels: dict[str, str]
+) -> tuple[Path, str, str, str]:
     kind = "目录" if path.is_dir() else "文件"
     if path.is_dir():
         total = sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
@@ -321,7 +330,11 @@ def _item_detail(path, src_key, sources, src_labels):
     return rel, kind, size, mtime
 
 
-def interactive_select(categories, sources, src_labels):
+def interactive_select(
+    categories: dict[str, list[tuple[Path, str]]],
+    sources: dict[str, Path],
+    src_labels: dict[str, str],
+) -> list[tuple[Path, str]]:
     all_labels = []
     label_map = {}
     for cat_key in ("agents", "commands", "skills", "config"):
@@ -341,7 +354,7 @@ def interactive_select(categories, sources, src_labels):
     return [label_map[c] for c in chosen]
 
 
-def _strwidth(s):
+def _strwidth(s: str) -> int:
     w = 0
     for ch in s:
         eaw = unicodedata.east_asian_width(ch)
@@ -352,7 +365,7 @@ def _strwidth(s):
 TABLE_HEADERS = ["类别", "名称", "类型", "目标路径"]
 
 
-def _build_table_row(src, cat, rel_dst):
+def _build_table_row(src: Path, cat: str, rel_dst: str) -> list[str]:
     c = CAT_COLORS.get(cat, "")
     return [
         f"{c}{CAT_LABELS[cat]}{RST}",
@@ -362,11 +375,11 @@ def _build_table_row(src, cat, rel_dst):
     ]
 
 
-def _strip_ansi(s):
+def _strip_ansi(s: str) -> str:
     return _ANSI_RE.sub("", s)
 
 
-def _print_table(rows, headers):
+def _print_table(rows: list[list[str]], headers: list[str]) -> None:
     widths = [_strwidth(h) for h in headers]
     stripped = []
     for row in rows:
@@ -397,7 +410,7 @@ def _print_table(rows, headers):
     print(f"  {bot}")
 
 
-def _confirm(selected, sources):
+def _confirm(selected: list[tuple[Path, str]], sources: dict[str, Path]) -> bool:
     cwd = Path.cwd()
     rows = []
     for src, cat in selected:
@@ -412,7 +425,7 @@ def _confirm(selected, sources):
     return custom_confirm("确认执行？", default=True)
 
 
-def get_target(src_path, category):
+def get_target(src_path: Path, category: str) -> Path:
     cwd = Path.cwd()
     name = src_path.name
     if category in ("agents", "commands", "skills"):
@@ -420,7 +433,7 @@ def get_target(src_path, category):
     return cwd / name
 
 
-def copy_items(selected, dry_run=False):
+def copy_items(selected: list[tuple[Path, str]], dry_run: bool = False) -> None:
     tag = "[DRY RUN] " if dry_run else ""
     targets = []
     for src, cat in selected:
@@ -449,7 +462,7 @@ def copy_items(selected, dry_run=False):
     _print_table(rows, TABLE_HEADERS)
 
 
-def main():
+def main() -> None:
     _enable_vt100()
     parser = argparse.ArgumentParser(
         description="交互式拷贝用户域 AI 编码工具配置到当前目录"
