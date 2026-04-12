@@ -1,0 +1,39 @@
+# sync_config.yaml - 可选配置文件
+# 放在 sync_config.py 同级目录下生效
+# 若无此文件或未安装 PyYAML，将使用内置默认值
+
+# 源目录映射（支持 ~ 展开为用户目录）
+sources:
+  claude: ~/.claude
+  agents: ~/.agents
+  opencode: ~/.config/opencode
+
+# 跳过的文件/目录名
+skip:
+  - .credentials.json
+  - mcp-needs-auth-cache.json
+  - stats-cache.json
+  - history.jsonl
+  - .skill-lock.json
+  - bun.lock
+  - package-lock.json
+  - .gitignore
+  - debug
+  - cache
+  - backups
+  - file-history
+  - paste-cache
+  - plans
+  - plugins
+  - projects
+  - session-env
+  - sessions
+  - shell-snapshots
+  - statusline-pro
+  - tasks
+  - telemetry
+  - todos
+  - usage-data
+  - output-styles
+  - node_modules
+  - __pycache__
