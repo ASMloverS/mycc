@@ -59,8 +59,15 @@ CAT_LABELS = {
     "agents": "Agents",
     "commands": "Commands",
     "skills": "Skills",
-    "config": "配置文件",
+    "config": "Config",
 }
+CAT_COLORS = {
+    "agents": "\033[36m",
+    "commands": "\033[33m",
+    "skills": "\033[35m",
+    "config": "\033[32m",
+}
+RST = "\033[0m"
 
 
 def _enable_vt100():
@@ -361,7 +368,7 @@ def _fmt_size(n):
 
 
 def _item_detail(path, src_key, sources, src_labels):
-    kind = "目录" if path.is_dir() else "文件"
+    kind = "Dir" if path.is_dir() else "File"
     if path.is_dir():
         total = sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
     else:
@@ -381,9 +388,11 @@ def interactive_select(categories, sources, src_labels):
         items = categories.get(cat_key, [])
         if not items:
             continue
+        c = CAT_COLORS.get(cat_key, "")
         for path, src_key in items:
             rel, kind, size, mtime = _item_detail(path, src_key, sources, src_labels)
-            label = f"[{CAT_LABELS[cat_key]}] {rel}  [{kind}]  {size}  {mtime}  ({src_labels[src_key]})"
+            tag = f"{c}[{CAT_LABELS[cat_key]}]{RST}"
+            label = f"{tag} {rel}  [{kind}]  {size}  {mtime}  ({src_labels[src_key]})"
             all_labels.append(label)
             label_map[label] = (path, cat_key)
     if not all_labels:
@@ -392,16 +401,66 @@ def interactive_select(categories, sources, src_labels):
     return [label_map[c] for c in chosen]
 
 
+def _strip_ansi(s):
+    import re
+
+    return re.sub(r"\033\[[0-9;]*m", "", s)
+
+
+def _print_table(rows, headers):
+    col_count = len(headers)
+    widths = [len(h) for h in headers]
+    stripped = []
+    for row in rows:
+        srow = []
+        for j, cell in enumerate(row):
+            sc = _strip_ansi(cell)
+            srow.append(sc)
+            widths[j] = max(widths[j], len(sc))
+        stripped.append(srow)
+    sep = "┼".join("─" * (w + 2) for w in widths)
+    top = "┌" + "┬".join("─" * (w + 2) for w in widths) + "┐"
+    bot = "└" + "┴".join("─" * (w + 2) for w in widths) + "┘"
+    mid = "├" + sep + "┤"
+
+    def fmt(cells, colored=None):
+        parts = []
+        for j, sc in enumerate(cells):
+            pad = widths[j] - len(sc)
+            if colored and j < len(colored):
+                parts.append(f" {colored[j]}{' ' * pad}{RST} ")
+            else:
+                parts.append(f" {sc}{' ' * pad} ")
+        return "│" + "│".join(parts) + "│"
+
+    print(f"\n  {top}")
+    print(f"  {fmt(headers)}")
+    print(f"  {mid}")
+    for i, srow in enumerate(stripped):
+        print(f"  {fmt(srow, rows[i])}")
+    print(f"  {bot}")
+
+
 def _confirm(selected, sources):
     cwd = Path.cwd()
-    print(f"\n即将拷贝 {len(selected)} 项:")
+    rows = []
     for src, cat in selected:
         dst = get_target(src, cat)
         try:
-            rel_dst = dst.relative_to(cwd)
+            rel_dst = str(dst.relative_to(cwd))
         except ValueError:
-            rel_dst = dst
-        print(f"  {rel_dst}  <-  {src}")
+            rel_dst = str(dst)
+        c = CAT_COLORS.get(cat, "")
+        rows.append(
+            [
+                f"{c}{CAT_LABELS[cat]}{RST}",
+                str(src.name),
+                "Dir" if src.is_dir() else "File",
+                rel_dst,
+            ]
+        )
+    print(f"\n即将拷贝 {len(selected)} 项:")
+    _print_table(rows, ["Category", "Name", "Type", "Target"])
     return custom_confirm("确认执行？", default=True)
 
 
@@ -418,8 +477,8 @@ def copy_items(selected, dry_run=False):
     targets = []
     for src, cat in selected:
         dst = get_target(src, cat)
-        targets.append(dst)
-        kind = "目录" if src.is_dir() else "文件"
+        targets.append((src, cat, dst))
+        kind = "Dir" if src.is_dir() else "File"
         print(f"{tag}拷贝{kind}: {src} -> {dst}")
         if dry_run:
             continue
@@ -430,9 +489,24 @@ def copy_items(selected, dry_run=False):
         else:
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dst)
+    cwd = Path.cwd()
+    rows = []
+    for src, cat, dst in targets:
+        c = CAT_COLORS.get(cat, "")
+        try:
+            rel_dst = str(dst.relative_to(cwd))
+        except ValueError:
+            rel_dst = str(dst)
+        rows.append(
+            [
+                f"{c}{CAT_LABELS[cat]}{RST}",
+                str(src.name),
+                "Dir" if src.is_dir() else "File",
+                rel_dst,
+            ]
+        )
     print(f"\n{tag}已拷贝 {len(selected)} 项:")
-    for dst in targets:
-        print(f"  - {dst}")
+    _print_table(rows, ["Category", "Name", "Type", "Target"])
 
 
 def main():
