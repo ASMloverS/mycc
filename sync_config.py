@@ -2,6 +2,7 @@
 """sync_config.py - 交互式拷贝用户域 AI 编码工具配置到当前目录"""
 
 import argparse
+import datetime
 import shutil
 import sys
 from pathlib import Path
@@ -94,27 +95,68 @@ def scan_sources():
     return cats
 
 
+def _fmt_size(n):
+    for unit in ("B", "KB", "MB", "GB"):
+        if n < 1024:
+            return f"{n:.0f}{unit}" if unit == "B" else f"{n:.1f}{unit}"
+        n /= 1024
+    return f"{n:.1f}TB"
+
+
+def _item_detail(path, src_key):
+    kind = "目录" if path.is_dir() else "文件"
+    if path.is_dir():
+        total = sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
+    else:
+        total = path.stat().st_size
+    size = _fmt_size(total)
+    mtime = datetime.datetime.fromtimestamp(path.stat().st_mtime).strftime(
+        "%Y-%m-%d %H:%M"
+    )
+    rel = path.relative_to(SOURCES[src_key])
+    return rel, kind, size, mtime
+
+
 def interactive_select(categories):
-    selected = []
-    for cat_key, items in categories.items():
+    all_choices = []
+    choice_map = {}
+    for cat_key in ("agents", "commands", "skills", "config"):
+        items = categories.get(cat_key, [])
         if not items:
             continue
-        choices = []
         for path, src_key in items:
-            rel = path.relative_to(SOURCES[src_key])
-            choices.append(f"{rel}  ({SRC_LABELS[src_key]})")
-        questions = [
-            inquirer.Checkbox(
-                "items", message=f"选择要拷贝的 {CAT_LABELS[cat_key]}", choices=choices
-            )
-        ]
-        answers = inquirer.prompt(questions)
-        if not answers or not answers["items"]:
-            continue
-        for chosen in answers["items"]:
-            idx = choices.index(chosen)
-            selected.append((items[idx][0], cat_key))
-    return selected
+            rel, kind, size, mtime = _item_detail(path, src_key)
+            label = f"[{CAT_LABELS[cat_key]}] {rel}  [{kind}]  {size}  {mtime}  ({SRC_LABELS[src_key]})"
+            all_choices.append(label)
+            choice_map[label] = (path, cat_key)
+    if not all_choices:
+        return []
+    questions = [
+        inquirer.Checkbox(
+            "items",
+            message="选择要拷贝的项目 (空格切换, 回车确认)",
+            choices=all_choices,
+        )
+    ]
+    answers = inquirer.prompt(questions)
+    if not answers or not answers["items"]:
+        return []
+    return [choice_map[c] for c in answers["items"]]
+
+
+def _confirm(selected):
+    cwd = Path.cwd()
+    print(f"\n即将拷贝 {len(selected)} 项:")
+    for src, cat in selected:
+        dst = get_target(src, cat)
+        try:
+            rel_dst = dst.relative_to(cwd)
+        except ValueError:
+            rel_dst = dst
+        print(f"  {rel_dst}  <-  {src}")
+    questions = [inquirer.Confirm("ok", message="确认执行？", default=True)]
+    answers = inquirer.prompt(questions)
+    return answers and answers.get("ok")
 
 
 def get_target(src_path, category):
@@ -166,7 +208,10 @@ def main():
     if not selected:
         print("未选择任何项目")
         return
-    print(f"\n已选择 {len(selected)} 项，开始拷贝...\n")
+    if not _confirm(selected):
+        print("已取消")
+        return
+    print(f"\n开始拷贝...\n")
     copy_items(selected, dry_run=args.dry_run)
 
 
