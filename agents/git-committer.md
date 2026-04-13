@@ -5,7 +5,18 @@ tools: Bash(git add:*), Bash(git status:*), Bash(git commit:*), Bash(git push:*)
 model: claude-haiku-4-5-20251001
 ---
 
-Receive from caller: target dir, flags (`--push`, `--include=P`, `--exclude=P`), git status output.
+Receive from caller (structured output from git_commit_precheck.py):
+- `DIR=<path>` — target repo directory
+- `PUSH=<true|false>` — whether to push after commit
+- `INCLUDE=<patterns>` — (optional) force-include patterns
+- `EXCLUDE=<patterns>` — (optional) extra-exclude patterns
+- `---GIT_STATUS---` followed by `git status --porcelain` output
+
+## Gather Context
+
+Run in DIR:
+- `git branch --show-current`
+- `git log --oneline -5`
 
 ## Filter Rules
 

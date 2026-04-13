@@ -1,34 +1,11 @@
 ---
-allowed-tools: Bash(git status:*), Bash(git branch:*), Bash(git log:*), Agent
+allowed-tools: Bash(python*), Agent
 description: Git add+commit w/ smart filtering & gitmoji. Spawns haiku agent.
 ---
 
-## Parse Args
+Run pre-check script:
 
-`$ARGUMENTS` → extract:
-- `dir`: first non-flag token (default: CWD)
-- `--push`: push after commit
-- `--include=P`: comma-sep patterns to force-include
-- `--exclude=P`: comma-sep patterns to extra-exclude
+`!python ~/.claude/commands/tools/git_commit_precheck.py $ARGUMENTS`
 
-## Gather Context
-
-Run in target dir:
-- `!git status --porcelain`
-- `!git branch --show-current`
-- `!git log --oneline -5`
-
-## Spawn Agent
-
-Pass all context to `git-committer` agent:
-
-```
-Target dir: <resolved dir>
-Flags: --push=<bool> --include=<P> --exclude=<P>
-Branch: <branch>
-Recent commits: <log>
-Git status:
-<status output>
-```
-
-Spawn agent w/ subagent_type `git-committer`. Agent handles filtering, confirmation, msg generation, commit, optional push.
+- If output contains `STATUS=CLEAN` → print "Nothing to commit." and stop.
+- Otherwise → spawn `git-committer` agent, pass the full script output verbatim as context.
