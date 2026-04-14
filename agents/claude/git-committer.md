@@ -32,9 +32,10 @@ Skip files: `*.log *.tmp *.pyc *.pyo *.generated.* *.auto.* *.min.js *.min.css *
 
 **B. Confirm** — show both lists. Ask: "Proceed? (y=commit / n=abort / e=edit)". All filtered → warn, offer override.
 
-**C. Msg** — `git diff --staged` or `git diff` on TO COMMIT files → pick emoji+type+desc.
+**C. Msg** — `git diff --staged` or `git diff` on TO COMMIT files → pick emoji+type+scope+desc.
 
-Format: `emoji type: desc` — e.g. `✨ feat: add login API`
+Format: `emoji type(scope): desc` — e.g. `✨ feat(auth): add login API`
+`scope` = affected module/dir (e.g. `auth`, `parser`, `cli`); omit only if change is truly global.
 
 ```
 feat/new   → ✨   fix/bug  → 🐛   docs     → 📝   style/fmt → 🎨

@@ -303,6 +303,10 @@ def scan_sources(
             ag = src_root / "AGENTS.md"
             if ag.exists():
                 cats["config"].append((ag, src_key))
+            for p in _iter_items(src_root / "agents", skip):
+                cats["agents"].append((p, src_key))
+            for p in _iter_items(src_root / "commands", skip):
+                cats["commands"].append((p, src_key))
     return cats
 
 
@@ -334,9 +338,9 @@ def interactive_select(
     categories: dict[str, list[tuple[Path, str]]],
     sources: dict[str, Path],
     src_labels: dict[str, str],
-) -> list[tuple[Path, str]]:
-    all_labels = []
-    label_map = {}
+) -> list[tuple[Path, str, str]]:
+    all_labels: list[str] = []
+    label_map: dict[str, tuple[Path, str, str]] = {}
     for cat_key in ("agents", "commands", "skills", "config"):
         items = categories.get(cat_key, [])
         if not items:
@@ -347,7 +351,7 @@ def interactive_select(
             tag = f"{c}[{CAT_LABELS[cat_key]}]{RST}"
             label = f"{tag} {rel}  [{kind}]  {size}  {mtime}  ({src_labels[src_key]})"
             all_labels.append(label)
-            label_map[label] = (path, cat_key)
+            label_map[label] = (path, cat_key, src_key)
     if not all_labels:
         return []
     chosen = emoji_checkbox(all_labels)
@@ -410,11 +414,11 @@ def _print_table(rows: list[list[str]], headers: list[str]) -> None:
     print(f"  {bot}")
 
 
-def _confirm(selected: list[tuple[Path, str]], sources: dict[str, Path]) -> bool:
+def _confirm(selected: list[tuple[Path, str, str]], sources: dict[str, Path]) -> bool:
     cwd = Path.cwd()
     rows = []
-    for src, cat in selected:
-        dst = get_target(src, cat)
+    for src, cat, src_key in selected:
+        dst = get_target(src, cat, src_key)
         try:
             rel_dst = str(dst.relative_to(cwd))
         except ValueError:
@@ -425,19 +429,21 @@ def _confirm(selected: list[tuple[Path, str]], sources: dict[str, Path]) -> bool
     return custom_confirm("确认执行？", default=True)
 
 
-def get_target(src_path: Path, category: str) -> Path:
+def get_target(src_path: Path, category: str, src_key: str = "") -> Path:
     cwd = Path.cwd()
     name = src_path.name
-    if category in ("agents", "commands", "skills"):
+    if category in ("agents", "commands"):
+        return cwd / category / src_key / name
+    if category == "skills":
         return cwd / category / name
     return cwd / name
 
 
-def copy_items(selected: list[tuple[Path, str]], dry_run: bool = False) -> None:
+def copy_items(selected: list[tuple[Path, str, str]], dry_run: bool = False) -> None:
     tag = "[DRY RUN] " if dry_run else ""
     targets = []
-    for src, cat in selected:
-        dst = get_target(src, cat)
+    for src, cat, src_key in selected:
+        dst = get_target(src, cat, src_key)
         targets.append((src, cat, dst))
         kind = "目录" if src.is_dir() else "文件"
         print(f"{tag}拷贝{kind}: {src} -> {dst}")

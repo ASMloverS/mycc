@@ -21,6 +21,8 @@
 
 ## Git Commit Convention
 - Never append `Co-Authored-By: Claude ...` to commit messages.
+- Commit message format: `gitmoji type(scope): desc` — e.g. `✨ feat(auth): add login API`
+- gitmoji mapping: feat/new→✨ fix→🐛 docs→📝 style→🎨 refactor→♻️ perf→⚡ test→✅ build→📦 ci→👷 chore→🔧 remove→🔥 wip→🚧
 # graphify
 - **graphify** (`~/.claude/skills/graphify/SKILL.md`) - any input to knowledge graph. Trigger: `/graphify`
 When the user types `/graphify`, invoke the Skill tool with `skill: "graphify"` before doing anything else.
