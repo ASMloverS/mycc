@@ -1,0 +1,22 @@
+pub mod complexity;
+pub mod forward_decl;
+pub mod include_guard;
+pub mod magic_number;
+pub mod naming;
+pub mod prohibited;
+pub mod unused;
+
+use crate::common::diag::Diagnostic;
+use crate::common::source::SourceFile;
+
+pub fn check_source(source: &SourceFile) -> Vec<Diagnostic> {
+    let mut diags = Vec::new();
+    diags.extend(naming::check_naming(source));
+    diags.extend(include_guard::check_include_guard(source));
+    diags.extend(complexity::check_complexity(source));
+    diags.extend(magic_number::check_magic_number(source));
+    diags.extend(unused::check_unused(source));
+    diags.extend(prohibited::check_prohibited(source));
+    diags.extend(forward_decl::check_forward_decl(source));
+    diags
+}

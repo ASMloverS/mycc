@@ -38,5 +38,9 @@ bun.lock
 *.graphify*
 graphify*
 
+# Rust
+Cargo.lock
+target/
+
 # Model-specific configs
 opencode.minimax.json

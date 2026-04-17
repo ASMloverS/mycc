@@ -16,49 +16,49 @@
 
 ## Phase 1 — Formatting
 
-| Task | File | Description |
-|------|------|-------------|
-| T01 | `phase1-T01-skeleton.md` | Project skeleton, Cargo.toml, clap CLI, module stubs |
-| T02 | `phase1-T02-encoding.md` | UTF-8 BOM removal, CRLF→LF, trailing whitespace strip |
-| T03 | `phase1-T03-indent.md` | Tab→2-space, brace-level indentation |
-| T04 | `phase1-T04-spacing.md` | Operator/comma/paren/semicolon spacing rules |
-| T05 | `phase1-T05-braces.md` | Brace attach style (Google) |
-| T06 | `phase1-T06-blank-lines.md` | Blank line normalization |
-| T07 | `phase1-T07-comments.md` | `/* */` → `//` conversion (all, including copyright) |
-| T08 | `phase1-T08-pointer-style.md` | Pointer alignment: `int *p` → `int* p` |
-| T09 | `phase1-T09-switch-indent.md` | switch-case indentation |
-| T10 | `phase1-T10-alignment.md` | Continuation alignment + struct/enum alignment |
-| T11 | `phase1-T11-line-length.md` | 120-column line wrapping |
-| T12 | `phase1-T12-include-sort.md` | #include Google three-group sorting |
-| T13 | `phase1-T13-config.md` | YAML config loading + directory lookup |
-| T14 | `phase1-T14-ignore.md` | `.cclinterignore` support |
-| T15 | `phase1-T15-modes.md` | `--diff` / `--check` / `-i` modes |
-| T16 | `phase1-T16-parallel.md` | rayon parallel file processing |
-| T17 | `phase1-T17-tests.md` | Unit tests + snapshot test framework |
+| Task | File | Description | Status |
+|------|------|-------------|--------|
+| T01 | `phase1-T01-skeleton.md` | Project skeleton, Cargo.toml, clap CLI, module stubs | ✅ Done |
+| T02 | `phase1-T02-encoding.md` | UTF-8 BOM removal, CRLF→LF, trailing whitespace strip | ⬜ Stub |
+| T03 | `phase1-T03-indent.md` | Tab→2-space, brace-level indentation | ⬜ Stub |
+| T04 | `phase1-T04-spacing.md` | Operator/comma/paren/semicolon spacing rules | ⬜ Stub |
+| T05 | `phase1-T05-braces.md` | Brace attach style (Google) | ⬜ Stub |
+| T06 | `phase1-T06-blank-lines.md` | Blank line normalization | ⬜ Stub |
+| T07 | `phase1-T07-comments.md` | `/* */` → `//` conversion (all, including copyright) | ⬜ Stub |
+| T08 | `phase1-T08-pointer-style.md` | Pointer alignment: `int *p` → `int* p` | ⬜ Stub |
+| T09 | `phase1-T09-switch-indent.md` | switch-case indentation | ⬜ Stub |
+| T10 | `phase1-T10-alignment.md` | Continuation alignment + struct/enum alignment | ⬜ Stub |
+| T11 | `phase1-T11-line-length.md` | 120-column line wrapping | ⬜ Stub |
+| T12 | `phase1-T12-include-sort.md` | #include Google three-group sorting | ⬜ Stub |
+| T13 | `phase1-T13-config.md` | YAML config loading + directory lookup | ✅ Done |
+| T14 | `phase1-T14-ignore.md` | `.cclinterignore` support | ⬜ Stub |
+| T15 | `phase1-T15-modes.md` | `--diff` / `--check` / `-i` modes | ⬜ Stub |
+| T16 | `phase1-T16-parallel.md` | rayon parallel file processing | ⬜ Stub |
+| T17 | `phase1-T17-tests.md` | Unit tests + snapshot test framework | ⬜ Stub |
 
 ## Phase 2 — Style Checking
 
-| Task | File | Description |
-|------|------|-------------|
-| T01 | `phase2-T01-diag-framework.md` | clang-tidy diagnostic output + rule trait |
-| T02 | `phase2-T02-naming.md` | Naming convention checks |
-| T03 | `phase2-T03-include-guard.md` | Include guard + duplicate include detection |
-| T04 | `phase2-T04-complexity.md` | Function/file line count, nesting depth |
-| T05 | `phase2-T05-magic-number.md` | Magic number detection + allowlist |
-| T06 | `phase2-T06-unused.md` | Unused variable/macro/param detection |
-| T07 | `phase2-T07-prohibited.md` | Prohibited function check + YAML extend/remove |
-| T08 | `phase2-T08-forward-decl.md` | Forward declaration check |
-| T09 | `phase2-T09-integration.md` | Exit code 2, checker integration, tests |
+| Task | File | Description | Status |
+|------|------|-------------|--------|
+| T01 | `phase2-T01-diag-framework.md` | clang-tidy diagnostic output + rule trait | ✅ Done |
+| T02 | `phase2-T02-naming.md` | Naming convention checks | ⬜ Stub |
+| T03 | `phase2-T03-include-guard.md` | Include guard + duplicate include detection | ⬜ Stub |
+| T04 | `phase2-T04-complexity.md` | Function/file line count, nesting depth | ⬜ Stub |
+| T05 | `phase2-T05-magic-number.md` | Magic number detection + allowlist | ⬜ Stub |
+| T06 | `phase2-T06-unused.md` | Unused variable/macro/param detection | ⬜ Stub |
+| T07 | `phase2-T07-prohibited.md` | Prohibited function check + YAML extend/remove | ⬜ Stub |
+| T08 | `phase2-T08-forward-decl.md` | Forward declaration check | ⬜ Stub |
+| T09 | `phase2-T09-integration.md` | Exit code 2, checker integration, tests | ⬜ Stub |
 
 ## Phase 3 — Static Analysis
 
-| Task | File | Description |
-|------|------|-------------|
-| T01 | `phase3-T01-level-framework.md` | Analysis level framework (basic/strict/deep) |
-| T02 | `phase3-T02-basic.md` | basic level rules |
-| T03 | `phase3-T03-strict.md` | strict level rules |
-| T04 | `phase3-T04-deep.md` | deep level rules |
-| T05 | `phase3-T05-integration.md` | Exit code 4, full integration + cross-platform tests |
+| Task | File | Description | Status |
+|------|------|-------------|--------|
+| T01 | `phase3-T01-level-framework.md` | Analysis level framework (basic/strict/deep) | ✅ Done |
+| T02 | `phase3-T02-basic.md` | basic level rules | ⬜ Stub |
+| T03 | `phase3-T03-strict.md` | strict level rules | ⬜ Stub |
+| T04 | `phase3-T04-deep.md` | deep level rules | ⬜ Stub |
+| T05 | `phase3-T05-integration.md` | Exit code 4, full integration + cross-platform tests | ⬜ Stub |
 
 ---
 

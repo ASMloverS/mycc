@@ -1,0 +1,40 @@
+format:
+  column_limit: 120
+  indent_width: 2
+  use_tabs: false
+  pointer_alignment: left
+  brace_style: attach
+  switch_case_indent: true
+  blank_lines_before_function: 1
+  blank_lines_after_include: 1
+  max_consecutive_blank_lines: 2
+  space_before_paren: false
+  spaces_around_operators: true
+  include_sorting: google
+  comment_style: double_slash
+  line_ending: lf
+  encoding: utf-8
+
+check:
+  naming:
+    function: snake_case
+    variable: snake_case
+    constant: upper_snake_case
+    type: pascal_case
+    macro: upper_snake_case
+  complexity:
+    max_function_lines: 100
+    max_file_lines: 2000
+    max_nesting_depth: 5
+  magic_number:
+    enabled: true
+    allowed: [0, 1, -1, 2]
+  include_guard:
+    style: pragma_once
+  prohibited_functions:
+    use_default: true
+    extra: []
+    remove: []
+
+analysis:
+  level: basic
