@@ -26,8 +26,8 @@ impl fmt::Display for Diagnostic {
         };
         write!(
             f,
-            "{}:{}:{}: {}: [{}] {}",
-            self.file, self.line, self.col, sev, self.rule_id, self.message
+            "{}:{}:{}: {}: {} [{}]",
+            self.file, self.line, self.col, sev, self.message, self.rule_id
         )
     }
 }
@@ -48,7 +48,7 @@ mod tests {
         };
         assert_eq!(
             format!("{d}"),
-            "main.c:10:5: warning: [naming-function] function should use snake_case"
+            "main.c:10:5: warning: function should use snake_case [naming-function]"
         );
     }
 }

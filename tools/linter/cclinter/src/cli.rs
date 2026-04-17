@@ -24,8 +24,8 @@ pub struct Args {
     #[arg(long)]
     pub format_only: bool,
 
-    #[arg(long, value_enum)]
-    pub analysis_level: Option<AnalysisLevel>,
+    #[arg(long, value_enum, default_value = "none")]
+    pub analysis_level: AnalysisLevel,
 
     #[arg(short, long)]
     pub jobs: Option<usize>,
@@ -44,21 +44,11 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
     let mut config = load_config(args.config.as_ref());
-    if let Some(ref level) = args.analysis_level {
-        config.analysis.level = level.clone();
-    }
+    config.analysis.level = args.analysis_level.clone();
 
     if args.verbose {
         eprintln!("config: {config:?}");
     }
 
-    let _ = collect_files(&args.paths, &args.exclude);
     Ok(())
-}
-
-fn collect_files(
-    _paths: &[PathBuf],
-    _excludes: &[String],
-) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
-    Ok(vec![])
 }

@@ -34,7 +34,7 @@ pub enum BraceStyle {
 pub enum IncludeSorting {
     #[default]
     Google,
-    None,
+    Disabled,
 }
 
 #[derive(Clone, Debug, Default, PartialEq, Eq, clap::ValueEnum, Serialize, Deserialize)]
@@ -260,8 +260,17 @@ impl Default for Config {
 pub fn load_config(path: Option<&PathBuf>) -> Config {
     match path {
         Some(p) if p.exists() => {
-            let content = std::fs::read_to_string(p).unwrap_or_default();
-            serde_yaml::from_str(&content).unwrap_or_default()
+            let content = match std::fs::read_to_string(p) {
+                Ok(c) => c,
+                Err(e) => {
+                    eprintln!("warning: cannot read config {}: {e}", p.display());
+                    return Config::default();
+                }
+            };
+            serde_yaml::from_str(&content).unwrap_or_else(|e| {
+                eprintln!("warning: invalid config {}: {e}", p.display());
+                Config::default()
+            })
         }
         _ => Config::default(),
     }

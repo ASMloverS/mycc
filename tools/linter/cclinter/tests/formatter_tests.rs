@@ -1,8 +1,10 @@
+mod common;
+
 use std::process::Command;
 
 #[test]
 fn help_flag_works() {
-    let bin = assert_cmd::get_bin();
+    let bin = common::get_bin();
     let output = Command::new(&bin).arg("--help").output().unwrap();
     assert!(output.status.success());
     let stdout = String::from_utf8_lossy(&output.stdout);
@@ -15,17 +17,4 @@ fn help_flag_works() {
     assert!(stdout.contains("--config"));
     assert!(stdout.contains("--exclude"));
     assert!(stdout.contains("--jobs"));
-}
-
-mod assert_cmd {
-    use std::path::PathBuf;
-
-    pub fn get_bin() -> PathBuf {
-        let mut path = std::env::current_exe().unwrap();
-        path.pop();
-        path.pop();
-        path.push("cclinter");
-        path.set_extension(std::env::consts::EXE_EXTENSION);
-        path
-    }
 }
