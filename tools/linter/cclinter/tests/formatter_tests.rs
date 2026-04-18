@@ -18,3 +18,71 @@ fn help_flag_works() {
     assert!(stdout.contains("--exclude"));
     assert!(stdout.contains("--jobs"));
 }
+
+use cclinter::common::source::SourceFile;
+use cclinter::config::FormatConfig;
+use cclinter::formatter::encoding::fix_encoding;
+use std::path::PathBuf;
+
+#[test]
+fn test_strip_trailing_whitespace() {
+    let mut src = SourceFile::from_string("int x = 1;   \nint y = 2;\t\n", PathBuf::from("test.c"));
+    fix_encoding(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "int x = 1;\nint y = 2;\n");
+}
+
+#[test]
+fn test_crlf_to_lf() {
+    let mut src = SourceFile::from_string("line1\r\nline2\r\n", PathBuf::from("test.c"));
+    fix_encoding(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "line1\nline2\n");
+}
+
+#[test]
+fn test_remove_bom() {
+    let mut src = SourceFile::from_string("\u{feff}int x;", PathBuf::from("test.c"));
+    fix_encoding(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "int x;");
+}
+
+#[test]
+fn test_combined_encoding_fixes() {
+    let mut src = SourceFile::from_string("\u{feff}int x = 1;   \r\nint y = 2;\t\r\n", PathBuf::from("test.c"));
+    fix_encoding(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "int x = 1;\nint y = 2;\n");
+}
+
+#[test]
+fn test_empty_input() {
+    let mut src = SourceFile::from_string("", PathBuf::from("test.c"));
+    fix_encoding(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "");
+}
+
+#[test]
+fn test_bom_only() {
+    let mut src = SourceFile::from_string("\u{feff}", PathBuf::from("test.c"));
+    fix_encoding(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "");
+}
+
+#[test]
+fn test_no_trailing_newline() {
+    let mut src = SourceFile::from_string("int x;", PathBuf::from("test.c"));
+    fix_encoding(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "int x;");
+}
+
+#[test]
+fn test_standalone_cr() {
+    let mut src = SourceFile::from_string("line1\rline2\r", PathBuf::from("test.c"));
+    fix_encoding(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "line1\nline2\n");
+}
+
+#[test]
+fn test_whitespace_only_line() {
+    let mut src = SourceFile::from_string("a\n   \nb\n", PathBuf::from("test.c"));
+    fix_encoding(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "a\n\nb\n");
+}
