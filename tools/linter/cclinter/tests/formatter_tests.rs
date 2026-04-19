@@ -22,6 +22,7 @@ fn help_flag_works() {
 use cclinter::common::source::SourceFile;
 use cclinter::config::FormatConfig;
 use cclinter::formatter::encoding::fix_encoding;
+use cclinter::formatter::indent::fix_indent;
 use std::path::PathBuf;
 
 #[test]
@@ -85,4 +86,69 @@ fn test_whitespace_only_line() {
     let mut src = SourceFile::from_string("a\n   \nb\n", PathBuf::from("test.c"));
     fix_encoding(&mut src, &FormatConfig::default()).unwrap();
     assert_eq!(src.content, "a\n\nb\n");
+}
+
+#[test]
+fn test_tab_to_spaces() {
+    let mut src = SourceFile::from_string("int main() {\n\tint x = 1;\n\treturn 0;\n}\n", PathBuf::from("test.c"));
+    fix_indent(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "int main() {\n  int x = 1;\n  return 0;\n}\n");
+}
+
+#[test]
+fn test_nested_indent() {
+    let mut src = SourceFile::from_string("void f() {\n\tif (1) {\n\t\treturn;\n\t}\n}\n", PathBuf::from("test.c"));
+    fix_indent(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "void f() {\n  if (1) {\n    return;\n  }\n}\n");
+}
+
+#[test]
+fn test_no_tabs_unchanged() {
+    let mut src = SourceFile::from_string("int x;\n    int y;\n", PathBuf::from("test.c"));
+    fix_indent(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "int x;\n    int y;\n");
+}
+
+#[test]
+fn test_custom_indent_width() {
+    let mut config = FormatConfig::default();
+    config.indent_width = 4;
+    let mut src = SourceFile::from_string("\tint x;\n", PathBuf::from("test.c"));
+    fix_indent(&mut src, &config).unwrap();
+    assert_eq!(src.content, "    int x;\n");
+}
+
+#[test]
+fn test_indent_empty_input() {
+    let mut src = SourceFile::from_string("", PathBuf::from("test.c"));
+    fix_indent(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "");
+}
+
+#[test]
+fn test_indent_tab_only_line() {
+    let mut src = SourceFile::from_string("\t\t\n", PathBuf::from("test.c"));
+    fix_indent(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "    \n");
+}
+
+#[test]
+fn test_indent_no_trailing_newline() {
+    let mut src = SourceFile::from_string("\tint x;", PathBuf::from("test.c"));
+    fix_indent(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "  int x;");
+}
+
+#[test]
+fn test_indent_space_before_tab_unchanged() {
+    let mut src = SourceFile::from_string(" \tcode\n", PathBuf::from("test.c"));
+    fix_indent(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, " \tcode\n");
+}
+
+#[test]
+fn test_indent_tab_then_space() {
+    let mut src = SourceFile::from_string("\t code\n", PathBuf::from("test.c"));
+    fix_indent(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "   code\n");
 }
