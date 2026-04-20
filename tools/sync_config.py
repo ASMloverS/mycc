@@ -61,12 +61,16 @@ CAT_LABELS = {
     "agents": "Agents",
     "commands": "Commands",
     "skills": "Skills",
+    "bin": "Bin",
+    "harness": "Harness",
     "config": "配置文件",
 }
 CAT_COLORS = {
     "agents": "\033[36m",
     "commands": "\033[33m",
     "skills": "\033[35m",
+    "bin": "\033[34m",
+    "harness": "\033[36m",
     "config": "\033[32m",
 }
 RST = "\033[0m"
@@ -281,12 +285,15 @@ def _scan_harness(
     src_root: Path, src_key: str, skip: set[str], cats: dict
 ) -> None:
     ch = src_root / "custom-harness"
-    if ch.exists():
-        for subdir in ("agents", "commands"):
-            d = ch / subdir
-            if d.exists():
-                for p in _iter_items(d, skip):
-                    cats[subdir].append((p, src_key, subdir, True))
+    if not ch.exists():
+        return
+    for p in _iter_items(ch, skip):
+        if p.is_dir():
+            for item in _iter_items(p, skip):
+                cat = p.name
+                cats.setdefault(cat, []).append((item, src_key, cat, True))
+        else:
+            cats.setdefault("harness", []).append((p, src_key, "harness", True))
     sk = src_root / "skills"
     if sk.exists():
         for p in _iter_items(sk, skip):
@@ -296,7 +303,7 @@ def _scan_harness(
 def scan_sources(
     sources: dict[str, Path], skip: set[str]
 ) -> dict[str, list[tuple[Path, str, str, bool]]]:
-    cats = {"agents": [], "commands": [], "skills": [], "config": []}
+    cats: dict[str, list[tuple[Path, str, str, bool]]] = {}
     for src_key, src_root in sources.items():
         if not src_root.exists():
             continue
@@ -304,11 +311,11 @@ def scan_sources(
         if src_key == "claude":
             fp = src_root / "CLAUDE.md"
             if fp.exists():
-                cats["config"].append((fp, src_key, "", False))
+                cats.setdefault("config", []).append((fp, src_key, "", False))
         elif src_key == "opencode":
             ag = src_root / "AGENTS.md"
             if ag.exists():
-                cats["config"].append((ag, src_key, "", False))
+                cats.setdefault("config", []).append((ag, src_key, "", False))
     return cats
 
 
@@ -349,16 +356,20 @@ def interactive_select(
 ) -> list[tuple[Path, str, str, bool]]:
     all_labels: list[str] = []
     label_map: dict[str, tuple[Path, str, str, bool]] = {}
-    for cat_key in ("agents", "commands", "skills", "config"):
+    _DISPLAY_ORDER = ("harness", "bin", "agents", "commands", "skills", "config")
+    cat_keys = [k for k in _DISPLAY_ORDER if k in categories]
+    cat_keys += [k for k in categories if k not in _DISPLAY_ORDER]
+    for cat_key in cat_keys:
         items = categories.get(cat_key, [])
         if not items:
             continue
         c = CAT_COLORS.get(cat_key, "")
+        cat_label = CAT_LABELS.get(cat_key, cat_key.title())
         for path, src_key, _sub, from_harness in items:
             rel, kind, size, mtime = _item_detail(
                 path, src_key, sources, src_labels
             )
-            tag = f"{c}[{CAT_LABELS[cat_key]}]{RST}"
+            tag = f"{c}[{cat_label}]{RST}"
             harness_tag = " [harness]" if from_harness else ""
             label = (
                 f"{tag}{harness_tag} {rel}  [{kind}]  {size}"
@@ -451,6 +462,8 @@ def get_target(
     cwd = Path.cwd()
     name = src_path.name
     if from_harness:
+        if category == "harness":
+            return cwd / "custom-harness" / src_key / name
         return cwd / "custom-harness" / src_key / category / name
     if category == "skills":
         return cwd / "skills" / src_key / name
@@ -506,7 +519,7 @@ def main() -> None:
         print("未发现可拷贝的配置项")
         return
     for k, v in categories.items():
-        print(f"  {CAT_LABELS[k]}: {len(v)} 项")
+        print(f"  {CAT_LABELS.get(k, k.title())}: {len(v)} 项")
     print(f"  共 {total} 项\n")
     selected = interactive_select(categories, sources, src_labels)
     if not selected:
