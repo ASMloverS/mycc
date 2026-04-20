@@ -21,12 +21,10 @@ HOME = Path.home()
 
 DEFAULT_SOURCES = {
     "claude": HOME / ".claude",
-    "agents": HOME / ".agents",
     "opencode": HOME / ".config" / "opencode",
 }
 DEFAULT_SRC_LABELS = {
     "claude": "~/.claude",
-    "agents": "~/.agents",
     "opencode": "~/.config/opencode",
 }
 DEFAULT_SKIP = {
@@ -279,34 +277,38 @@ def _iter_items(directory: Path, skip: set[str]) -> Iterator[Path]:
         yield p
 
 
+def _scan_harness(
+    src_root: Path, src_key: str, skip: set[str], cats: dict
+) -> None:
+    ch = src_root / "custom-harness"
+    if ch.exists():
+        for subdir in ("agents", "commands", "skills"):
+            d = ch / subdir
+            if d.exists():
+                for p in _iter_items(d, skip):
+                    cats[subdir].append((p, src_key, subdir, True))
+    sk = src_root / "skills"
+    if sk.exists():
+        for p in _iter_items(sk, skip):
+            cats["skills"].append((p, src_key, "skills", False))
+
+
 def scan_sources(
     sources: dict[str, Path], skip: set[str]
-) -> dict[str, list[tuple[Path, str]]]:
+) -> dict[str, list[tuple[Path, str, str, bool]]]:
     cats = {"agents": [], "commands": [], "skills": [], "config": []}
     for src_key, src_root in sources.items():
         if not src_root.exists():
             continue
+        _scan_harness(src_root, src_key, skip, cats)
         if src_key == "claude":
-            for p in _iter_items(src_root / "agents", skip):
-                cats["agents"].append((p, src_key))
-            for p in _iter_items(src_root / "commands", skip):
-                cats["commands"].append((p, src_key))
             fp = src_root / "CLAUDE.md"
             if fp.exists():
-                cats["config"].append((fp, src_key))
-        elif src_key == "agents":
-            sk_dir = src_root / "skills"
-            if sk_dir.exists():
-                for p in _iter_items(sk_dir, skip):
-                    cats["skills"].append((p, src_key))
+                cats["config"].append((fp, src_key, "", False))
         elif src_key == "opencode":
             ag = src_root / "AGENTS.md"
             if ag.exists():
-                cats["config"].append((ag, src_key))
-            for p in _iter_items(src_root / "agents", skip):
-                cats["agents"].append((p, src_key))
-            for p in _iter_items(src_root / "commands", skip):
-                cats["commands"].append((p, src_key))
+                cats["config"].append((ag, src_key, "", False))
     return cats
 
 
@@ -322,36 +324,48 @@ def _item_detail(
     path: Path, src_key: str, sources: dict[str, Path], src_labels: dict[str, str]
 ) -> tuple[Path, str, str, str]:
     kind = "目录" if path.is_dir() else "文件"
-    if path.is_dir():
-        total = sum(f.stat().st_size for f in path.rglob("*") if f.is_file())
-    else:
-        total = path.stat().st_size
+    try:
+        if path.is_dir():
+            total = sum(
+                f.stat().st_size for f in path.rglob("*") if f.is_file()
+            )
+        else:
+            total = path.stat().st_size
+        mtime = datetime.datetime.fromtimestamp(path.stat().st_mtime).strftime(
+            "%Y-%m-%d %H:%M"
+        )
+    except (FileNotFoundError, OSError):
+        total = 0
+        mtime = "未知"
     size = _fmt_size(total)
-    mtime = datetime.datetime.fromtimestamp(path.stat().st_mtime).strftime(
-        "%Y-%m-%d %H:%M"
-    )
     rel = path.relative_to(sources[src_key])
     return rel, kind, size, mtime
 
 
 def interactive_select(
-    categories: dict[str, list[tuple[Path, str]]],
+    categories: dict[str, list[tuple[Path, str, str, bool]]],
     sources: dict[str, Path],
     src_labels: dict[str, str],
-) -> list[tuple[Path, str, str]]:
+) -> list[tuple[Path, str, str, bool]]:
     all_labels: list[str] = []
-    label_map: dict[str, tuple[Path, str, str]] = {}
+    label_map: dict[str, tuple[Path, str, str, bool]] = {}
     for cat_key in ("agents", "commands", "skills", "config"):
         items = categories.get(cat_key, [])
         if not items:
             continue
         c = CAT_COLORS.get(cat_key, "")
-        for path, src_key in items:
-            rel, kind, size, mtime = _item_detail(path, src_key, sources, src_labels)
+        for path, src_key, _sub, from_harness in items:
+            rel, kind, size, mtime = _item_detail(
+                path, src_key, sources, src_labels
+            )
             tag = f"{c}[{CAT_LABELS[cat_key]}]{RST}"
-            label = f"{tag} {rel}  [{kind}]  {size}  {mtime}  ({src_labels[src_key]})"
+            harness_tag = " [harness]" if from_harness else ""
+            label = (
+                f"{tag}{harness_tag} {rel}  [{kind}]  {size}"
+                f"  {mtime}  ({src_labels[src_key]})"
+            )
             all_labels.append(label)
-            label_map[label] = (path, cat_key, src_key)
+            label_map[label] = (path, cat_key, src_key, from_harness)
     if not all_labels:
         return []
     chosen = emoji_checkbox(all_labels)
@@ -414,11 +428,13 @@ def _print_table(rows: list[list[str]], headers: list[str]) -> None:
     print(f"  {bot}")
 
 
-def _confirm(selected: list[tuple[Path, str, str]], sources: dict[str, Path]) -> bool:
+def _confirm(
+    selected: list[tuple[Path, str, str, bool]], sources: dict[str, Path]
+) -> bool:
     cwd = Path.cwd()
     rows = []
-    for src, cat, src_key in selected:
-        dst = get_target(src, cat, src_key)
+    for src, cat, src_key, from_harness in selected:
+        dst = get_target(src, cat, src_key, from_harness)
         try:
             rel_dst = str(dst.relative_to(cwd))
         except ValueError:
@@ -429,21 +445,25 @@ def _confirm(selected: list[tuple[Path, str, str]], sources: dict[str, Path]) ->
     return custom_confirm("确认执行？", default=True)
 
 
-def get_target(src_path: Path, category: str, src_key: str = "") -> Path:
+def get_target(
+    src_path: Path, category: str, src_key: str = "", from_harness: bool = False
+) -> Path:
     cwd = Path.cwd()
     name = src_path.name
-    if category in ("agents", "commands"):
-        return cwd / category / src_key / name
+    if from_harness:
+        return cwd / "custom-harness" / src_key / category / name
     if category == "skills":
-        return cwd / category / name
+        return cwd / "skills" / src_key / name
     return cwd / name
 
 
-def copy_items(selected: list[tuple[Path, str, str]], dry_run: bool = False) -> None:
+def copy_items(
+    selected: list[tuple[Path, str, str, bool]], dry_run: bool = False
+) -> None:
     tag = "[DRY RUN] " if dry_run else ""
     targets = []
-    for src, cat, src_key in selected:
-        dst = get_target(src, cat, src_key)
+    for src, cat, src_key, from_harness in selected:
+        dst = get_target(src, cat, src_key, from_harness)
         targets.append((src, cat, dst))
         kind = "目录" if src.is_dir() else "文件"
         print(f"{tag}拷贝{kind}: {src} -> {dst}")
@@ -451,8 +471,11 @@ def copy_items(selected: list[tuple[Path, str, str]], dry_run: bool = False) -> 
             continue
         if src.is_dir():
             if dst.exists():
-                shutil.rmtree(dst)
-            shutil.copytree(src, dst)
+                if dst.is_dir():
+                    shutil.rmtree(dst)
+                else:
+                    dst.unlink()
+            shutil.copytree(src, dst, symlinks=False)
         else:
             dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dst)
@@ -492,6 +515,18 @@ def main() -> None:
     if not _confirm(selected, sources):
         print("已取消")
         return
+    dirs_to_delete: set[str] = set()
+    for _src, cat, _src_key, from_harness in selected:
+        if from_harness and cat in ("agents", "commands"):
+            dirs_to_delete.add(cat)
+    for d in sorted(dirs_to_delete):
+        target = Path.cwd() / d
+        if target.exists():
+            if target.is_dir():
+                shutil.rmtree(target)
+            else:
+                target.unlink()
+            print(f"已删除旧目录: {target}/")
     print(f"\n开始拷贝...\n")
     copy_items(selected, dry_run=args.dry_run)
 
