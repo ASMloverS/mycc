@@ -1,6 +1,6 @@
 ---
 name: bug-fixer
-description: Fix bugs: debug→doc→TDD fix→clean→simplify→review. Use on bugs, test failures, unexpected behavior.
+description: "Fix bugs: debug→doc→TDD fix→clean→simplify→review. Use on bugs, test failures, unexpected behavior."
 tools: Read, Write, Edit, Bash, Agent
 model: claude-sonnet-4-6
 ---
