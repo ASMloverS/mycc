@@ -282,7 +282,7 @@ def _scan_harness(
 ) -> None:
     ch = src_root / "custom-harness"
     if ch.exists():
-        for subdir in ("agents", "commands", "skills"):
+        for subdir in ("agents", "commands"):
             d = ch / subdir
             if d.exists():
                 for p in _iter_items(d, skip):

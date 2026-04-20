@@ -5,7 +5,6 @@
 # 源目录映射（支持 ~ 展开为用户目录）
 sources:
   claude: ~/.claude
-  agents: ~/.agents
   opencode: ~/.config/opencode
 
 # 跳过的文件/目录名
