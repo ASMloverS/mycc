@@ -1,0 +1,19 @@
+agents:
+  bug-fixer:        { path: agents/bug-fixer.md,        desc: "Debug→doc→TDD fix→clean→simplify→review" }
+  code-implementer: { path: agents/code-implementer.md, desc: "TDD impl for C/C++/Python/Go/TS/Rust" }
+  code-reviewer:    { path: agents/code-reviewer.md,    desc: "Review impl against design doc/spec" }
+  doc-corrector:    { path: agents/doc-corrector.md,    desc: "Corrects docs to match current code" }
+  doc-designer:     { path: agents/doc-designer.md,     desc: "Generates design docs and splits tasks" }
+  doc-fixer:        { path: agents/doc-fixer.md,        desc: "Fixes doc vulnerabilities and contradictions" }
+  doc-reviewer:     { path: agents/doc-reviewer.md,     desc: "Read-only doc auditor for gaps/risks" }
+  git-committer:    { path: agents/git-committer.md,    desc: "Git add+commit w/ gitmoji msg" }
+
+commands:
+  dev-flow:   { path: commands/dev-flow.md,   desc: "Dev cycle: implement→review→fix→doc update" }
+  git-commit: { path: commands/git-commit.md, desc: "Git add+commit w/ smart filtering & gitmoji" }
+
+skills:
+  doc-refine: { path: skills/doc-refine/SKILL.md, desc: "Ultra-compress docs (EN caveman / CN 文言文)" }
+  doc-sync:   { path: skills/doc-sync/SKILL.md,   desc: "Align Markdown docs with current code" }
+  doc-write:  { path: skills/doc-write/SKILL.md,  desc: "Write docs from context (CN 文言文 / EN caveman)" }
+  vsc-commit: { path: skills/vsc-commit/SKILL.md, desc: "Git/SVN commit w/ smart filtering" }
