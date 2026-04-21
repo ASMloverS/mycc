@@ -22,15 +22,18 @@ JSON → `doc_path`.
 Read `PDIR\tdd.md` → p. Dispatch general-purpose (sonnet): p + doc_path.
 success=false → relay+stop. Else `fix_files`, `diff_lines`.
 
-## Step 4 — Clean
+## Step 4 — Clean ∥ Simplify
 
-Read `PDIR\cleaner.md` → p. Dispatch general-purpose (haiku): p + fix_files + doc_path.
+In **one message**, dispatch both sub-subagents concurrently:
 
-## Step 5 — Simplify
+- **Clean** (haiku): Read `PDIR\cleaner.md` → p. Dispatch general-purpose (haiku): p + fix_files + doc_path.
+  Scope: dead-code removal, formatting only. Must NOT restructure logic.
+- **Simplify** (opus): Read `PDIR\simplify.md` → p. Dispatch general-purpose (opus): p + fix_files + diff_lines.
+  Scope: logic/expression simplification only. Must NOT add/remove lines beyond diff scope.
 
-Read `PDIR\simplify.md` → p. Dispatch general-purpose (opus): p + fix_files + diff_lines.
+Wait for both results before Step 5.
 
-## Step 6 — Review
+## Step 5 — Review
 
 Phase A: self-check fix_files — correctness, edges, logic.
 

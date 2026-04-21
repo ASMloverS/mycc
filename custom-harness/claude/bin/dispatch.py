@@ -159,6 +159,28 @@ def _die(msg: str, code: int = 1) -> None:
 # Main
 # ---------------------------------------------------------------------------
 
+def build_payload(registry: dict, name_token: str, user_prompt: str,
+                  model: str | None = None, bg: bool = False) -> dict:
+    type_, name, entry = resolve_name(registry, name_token)
+    md_path = HARNESS_DIR / entry["path"]
+    if not md_path.exists():
+        _die(f"MD not found: {md_path}", 3)
+    fm, body = parse_md(md_path)
+    if not body.strip():
+        _die(f"Empty MD body: {md_path}", 3)
+    payload: dict = {
+        "subagent_type": "general-purpose",
+        "description": entry["desc"][:50],
+        "prompt": assemble_prompt(type_, name, body, fm, user_prompt),
+    }
+    effective_model = model or fm.get("model")
+    if effective_model:
+        payload["model"] = effective_model
+    if bg:
+        payload["run_in_background"] = True
+    return payload
+
+
 def main() -> None:
     args = sys.argv[1:]
 
@@ -173,6 +195,7 @@ def main() -> None:
     # Parse flags
     model: str | None = None
     bg = False
+    parallel = False
     clean: list[str] = []
     i = 0
     while i < len(args):
@@ -182,41 +205,36 @@ def main() -> None:
         elif args[i] == "--bg":
             bg = True
             i += 1
+        elif args[i] == "--parallel":
+            parallel = True
+            i += 1
         else:
             clean.append(args[i])
             i += 1
 
+    registry = load_registry()
+
+    # --parallel: each remaining arg is "name prompt…" (first word = name, rest = prompt)
+    if parallel:
+        if not clean:
+            print_help(registry)
+            sys.exit(0)
+        payloads = []
+        for token in clean:
+            parts = token.split(None, 1)
+            if len(parts) < 2:
+                _die(f"--parallel token must be 'name prompt': got {token!r}", 2)
+            payloads.append(build_payload(registry, parts[0], parts[1], model, bg))
+        print(json.dumps(payloads, ensure_ascii=False, indent=2))
+        return
+
     if len(clean) < 2:
-        print_help(load_registry())
+        print_help(registry)
         sys.exit(0)
 
     name_token, user_prompt = clean[0], " ".join(clean[1:])
-    registry = load_registry()
-    type_, name, entry = resolve_name(registry, name_token)
-
-    md_path = HARNESS_DIR / entry["path"]
-    if not md_path.exists():
-        _die(f"MD not found: {md_path}", 3)
-
-    fm, body = parse_md(md_path)
-    if not body.strip():
-        _die(f"Empty MD body: {md_path}", 3)
-
-    prompt = assemble_prompt(type_, name, body, fm, user_prompt)
-    desc = entry["desc"][:50]
-
-    payload: dict = {
-        "subagent_type": "general-purpose",
-        "description": desc,
-        "prompt": prompt,
-    }
-    effective_model = model or fm.get("model")
-    if effective_model:
-        payload["model"] = effective_model
-    if bg:
-        payload["run_in_background"] = True
-
-    print(json.dumps(payload, ensure_ascii=False, indent=2))
+    print(json.dumps(build_payload(registry, name_token, user_prompt, model, bg),
+                     ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

@@ -9,12 +9,16 @@ description: User-invoked router. Spawn registered agent/command/skill as one-sh
 
 User: `/dispatch <name|type:name> <prompt>` [`--model M`] [`--bg`] [`--help [name]`]
 
+Parallel: `/dispatch --parallel "name1 prompt1" "name2 prompt2" …` [`--model M`] [`--bg`]
+Each quoted token: first word = name, rest = prompt.
+
 ## Flow
 
 1. Bash → `python ~/.claude/custom-harness/bin/dispatch.py <argv>`
 2. Parse stdout JSON
-3. Call Agent tool w/ JSON fields
-4. Return subagent result
+3. **If array**: call Agent tool N times **in a single message** (parallel spawn). Collect all results.
+   **If object**: call Agent tool once. Return result.
+4. Return subagent result(s)
 
 ## `--help`
 
