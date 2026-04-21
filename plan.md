@@ -2,113 +2,108 @@
 
 ## 鹄的
 
-`sync_config.*` → `tools/`；增跨平台启动脚本；`agents/`、`commands/` 按 `src_key` 分子目录。
+`sync_config.*` → `tools/`；增跨平台启动脚本；引入 `custom-harness` 机制，agents/commands/bin/skills 按源分目录同步。
 
-## 目录（重构后）
+## 目录（现状）
 
 ```
 mycc/
 ├── tools/
-│   ├── sync_config.py
-│   └── sync_config.yaml
-├── sync.bat
-├── sync.sh
-├── agents/
-│   ├── claude/           # ← ~/.claude/agents/
-│   │   ├── bug-fixer.md
-│   │   ├── code-implementer.md
-│   │   ├── code-reviewer.md
-│   │   ├── doc-corrector.md
-│   │   ├── doc-designer.md
-│   │   ├── doc-reviewer.md
-│   │   └── git-committer.md
-│   └── opencode/         # ← ~/.config/opencode/agents/
-├── commands/
-│   ├── claude/           # ← ~/.claude/commands/
-│   │   ├── dev-flow.md
-│   │   ├── git-commit.md
-│   │   └── tools/
-│   └── opencode/         # ← ~/.config/opencode/commands/
-├── skills/               # 不变 ← ~/.agents/skills/
-├── CLAUDE.md             # 不变
-├── AGENTS.md             # 不变
+│   ├── sync_config.py          # 主脚本
+│   └── sync_config.yaml        # 可选配置（源路径、跳过列表）
+├── sync.bat                    # Win11 启动
+├── sync.sh                     # Debian 12 启动
+├── custom-harness/
+│   └── claude/                 # ← harness 源：~/.claude/custom-harness/
+│       ├── agents/             # agent markdown 文件
+│       ├── commands/           # command markdown 文件
+│       ├── bin/                # 辅助脚本
+│       ├── skills/             # harness 内 skills
+│       └── registry.yaml
+├── skills/                     # ← ~/.agents/skills/ (非 harness)
+├── CLAUDE.md                   # ← ~/.claude/CLAUDE.md
+├── AGENTS.md                   # ← ~/.config/opencode/AGENTS.md
 └── ...
 ```
 
-## 步
+## 已完成
 
-### 一、建 `tools/`，移入文件
+### 一、`tools/` 目录 + 文件迁移 ✅
 
-- `sync_config.py` → `tools/sync_config.py`
-- `sync_config.yaml` → `tools/sync_config.yaml`
+- `tools/sync_config.py` — 主脚本（548 行）
+- `tools/sync_config.yaml` — 可选 YAML 配置
 
-### 二、迁现有文件入子目录
+### 二、跨平台启动脚本 ✅
 
-- `agents/*.md`（7）→ `agents/claude/*.md`
-- `commands/*`（含 `commands/tools/`）→ `commands/claude/*`
+- `sync.bat` — `python "%~dp0tools\sync_config.py" %*`
+- `sync.sh` — `exec python3 "$(dirname "$0")/tools/sync_config.py" "$@"`
 
-### 三、增启动脚本
+### 三、harness 机制替代原 agents/commands 子目录方案 ✅
 
-#### `sync.bat`（Win11）
+原方案：`agents/claude/*.md`、`commands/claude/*` 按源分目录。
+实际方案：引入 `custom-harness` 概念，源端按 `~/.claude/custom-harness/{agents,commands,bin,skills}/` 组织，目标端拷贝至 `custom-harness/{src_key}/{category}/`。
 
-```bat
-@echo off
-python "%~dp0tools\sync_config.py" %*
-```
+### 四、核心实现细节
 
-#### `sync.sh`（Debian 12）
-
-```sh
-#!/bin/bash
-exec python3 "$(dirname "$0")/tools/sync_config.py" "$@"
-```
-
-### 四、改 `tools/sync_config.py`
-
-#### a. `scan_sources()` — 增 opencode agents/commands 扫描
+#### 数据模型：四元组
 
 ```python
-elif src_key == "opencode":
-    ag = src_root / "AGENTS.md"
-    if ag.exists():
-        cats["config"].append((ag, src_key))
-    for p in _iter_items(src_root / "agents", skip):
-        cats["agents"].append((p, src_key))
-    for p in _iter_items(src_root / "commands", skip):
-        cats["commands"].append((p, src_key))
+(path: Path, category: str, src_key: str, from_harness: bool)
 ```
 
-#### b. `interactive_select()` — 保留 `src_key`
+`from_harness=True` 标识来自源端 `custom-harness/` 子目录的项目。
 
-- `label_map[label]` → 三元组 `(path, cat_key, src_key)`
-- 返 `list[tuple[Path, str, str]]`
+#### a. `_scan_harness()` — harness 扫描
 
-#### c. `get_target()` — 增参数 `src_key`，按来源路由
+扫描 `{src_root}/custom-harness/`：
+- 子目录（agents/commands/bin 等）→ 按子目录名分类
+- 顶层文件 → 归入 `harness` 类
+- 额外扫描 `{src_root}/skills/` → 归入 `skills`
+
+#### b. `scan_sources()` — 总入口
 
 ```python
-def get_target(src_path: Path, category: str, src_key: str) -> Path:
-    cwd = Path.cwd()
-    name = src_path.name
-    if category in ("agents", "commands"):
-        return cwd / category / src_key / name
+for src_key, src_root in sources:
+    _scan_harness(src_root, src_key, skip, cats)
+    # claude: CLAUDE.md → config
+    # opencode: AGENTS.md → config
+```
+
+不直接扫描 opencode 的 agents/commands，统一走 harness 路径。
+
+#### c. `get_target()` — 按来源路由
+
+```python
+def get_target(src_path, category, src_key="", from_harness=False):
+    if from_harness:
+        if category == "harness":
+            return cwd / "custom-harness" / src_key / name
+        return cwd / "custom-harness" / src_key / category / name
     if category == "skills":
-        return cwd / category / name
+        return cwd / "skills" / src_key / name
     return cwd / name
 ```
 
-#### d. `_confirm()` + `copy_items()` — 适三元组
+#### d. 交互 UI
 
-- 解包加 `src_key`
-- 调 `get_target(src, cat, src_key)`
+- `emoji_checkbox()` — 上下移动、空格切换、回车确认，含滚动条
+- `custom_confirm()` — 左右切换确认/取消
+- `_print_table()` — 类别/名称/类型/目标路径 表格
+- 跨平台键盘输入（Windows `msvcrt` / Linux `termios`）
+- Windows VT100 转义启用（`_enable_vt100`）
 
-#### e. `_build_table_row()` — 路径示 `agents/claude/xxx`
+#### e. 其他特性
 
-### 五、`sync_config.yaml` — 无须改
+- `--dry-run` 预览模式
+- YAML 配置加载（`load_config`），可选覆盖默认源和跳过列表
+- 拷贝前自动删除旧 `agents/`、`commands/` 目录（`main` 尾段）
+- 显示文件大小（`_fmt_size`）和修改时间
 
-动态扫描由运行时自检目录存否，yaml 映射不变。
+### 五、`sync_config.yaml` ✅
+
+默认源路径 + 跳过列表，与 `DEFAULT_SOURCES`/`DEFAULT_SKIP` 一致。无需改动。
 
 ## 不变
 
-- `skills/` ← `~/.agents/skills/`，扫描逻辑不改
 - `CLAUDE.md`、`AGENTS.md` 拷贝不改
 - `~/.agents` 源不改
