@@ -297,7 +297,7 @@ def _scan_harness(
     sk = src_root / "skills"
     if sk.exists():
         for p in _iter_items(sk, skip):
-            cats["skills"].append((p, src_key, "skills", False))
+            cats.setdefault("skills", []).append((p, src_key, "skills", False))
 
 
 def scan_sources(
