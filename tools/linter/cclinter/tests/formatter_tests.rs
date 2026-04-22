@@ -26,8 +26,11 @@ use cclinter::formatter::braces::fix_braces;
 use cclinter::formatter::encoding::fix_encoding;
 use cclinter::formatter::indent::fix_indent;
 use cclinter::formatter::spacing::fix_spacing;
-use std::path::PathBuf;
 
+use cclinter::formatter::comments::fix_comments;
+use cclinter::config::CommentStyle;
+
+use std::path::PathBuf;
 #[test]
 fn test_strip_trailing_whitespace() {
     let mut src = SourceFile::from_string("int x = 1;   \nint y = 2;\t\n", PathBuf::from("test.c"));
@@ -620,4 +623,148 @@ fn test_blank_consecutive_functions() {
     let mut src = SourceFile::from_string("void f() {\n}\nvoid g() {\n}\n", PathBuf::from("test.c"));
     fix_blank_lines(&mut src, &config).unwrap();
     assert!(src.content.contains("}\n\nvoid g()"));
+}
+
+#[test]
+fn test_comment_single_line_block() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("int x; /* comment */ int y;\n", PathBuf::from("test.c"));
+    fix_comments(&mut src, &config).unwrap();
+    assert!(src.content.contains("// comment"));
+    assert!(!src.content.contains("/*"));
+}
+
+#[test]
+fn test_comment_standalone_block() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("/* standalone comment */\n", PathBuf::from("test.c"));
+    fix_comments(&mut src, &config).unwrap();
+    assert!(src.content.starts_with("// standalone comment"));
+}
+
+#[test]
+fn test_comment_multi_line_block() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("/* line1\n   line2\n   line3 */\n", PathBuf::from("test.c"));
+    fix_comments(&mut src, &config).unwrap();
+    let lines: Vec<&str> = src.content.lines().collect();
+    assert!(lines[0].starts_with("//"));
+    assert!(lines[1].trim_start().starts_with("//"));
+    assert!(lines[2].trim_start().starts_with("//"));
+}
+
+#[test]
+fn test_comment_preserve_double_slash() {
+    let config = FormatConfig::default();
+    let input = "// already slash comment\n";
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_comments(&mut src, &config).unwrap();
+    assert_eq!(src.content, input);
+}
+
+#[test]
+fn test_comment_copyright_block() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("/* Copyright 2026 My Corp\n * All rights reserved. */\n", PathBuf::from("test.c"));
+    fix_comments(&mut src, &config).unwrap();
+    assert!(src.content.contains("// Copyright 2026 My Corp"));
+    assert!(src.content.contains("// All rights reserved."));
+}
+
+#[test]
+fn test_comment_preserve_mode() {
+    let mut config = FormatConfig::default();
+    config.comment_style = CommentStyle::Preserve;
+    let input = "/* keep this block comment */\n";
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_comments(&mut src, &config).unwrap();
+    assert_eq!(src.content, input);
+}
+
+#[test]
+fn test_comment_string_literal_not_converted() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("char* s = \"/* not a comment */\";\n", PathBuf::from("test.c"));
+    fix_comments(&mut src, &config).unwrap();
+    assert!(src.content.contains("\"/* not a comment */\""));
+}
+
+#[test]
+fn test_comment_empty_block() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("/**/\n", PathBuf::from("test.c"));
+    fix_comments(&mut src, &config).unwrap();
+    assert_eq!(src.content, "//\n");
+}
+
+#[test]
+fn test_comment_adjacent_blocks() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("/* a */ /* b */\n", PathBuf::from("test.c"));
+    fix_comments(&mut src, &config).unwrap();
+    assert!(src.content.contains("// a"));
+    assert!(src.content.contains("// b"));
+    assert!(!src.content.contains("/*"));
+}
+
+#[test]
+fn test_comment_empty_input() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("", PathBuf::from("test.c"));
+    fix_comments(&mut src, &config).unwrap();
+    assert_eq!(src.content, "");
+}
+
+#[test]
+fn test_comment_multi_line_with_stars() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("/**\n * Copyright\n * License\n */\n", PathBuf::from("test.c"));
+    fix_comments(&mut src, &config).unwrap();
+    assert!(src.content.contains("// Copyright"));
+    assert!(src.content.contains("// License"));
+    assert!(!src.content.contains("/**"));
+}
+
+#[test]
+fn test_comment_inline_preserves_code() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("int x = 1; /* TODO: fix */ int y = 2;\n", PathBuf::from("test.c"));
+    fix_comments(&mut src, &config).unwrap();
+    assert!(src.content.contains("int x = 1;"));
+    assert!(src.content.contains("// TODO: fix"));
+    assert!(src.content.contains("int y = 2;"));
+}
+
+#[test]
+fn test_comment_char_literal_not_converted() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("char c = '/';\n", PathBuf::from("test.c"));
+    fix_comments(&mut src, &config).unwrap();
+    assert_eq!(src.content, "char c = '/';\n");
+}
+
+#[test]
+fn test_comment_preserves_inner_indentation() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("/* Args:\n *   x - the x\n *   y - the y\n */\n", PathBuf::from("test.c"));
+    fix_comments(&mut src, &config).unwrap();
+    assert!(src.content.contains("// Args:"));
+    assert!(src.content.contains("//   x - the x"));
+    assert!(src.content.contains("//   y - the y"));
+}
+
+#[test]
+fn test_comment_star_emphasis_preserved() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("/* ***important*** */\n", PathBuf::from("test.c"));
+    fix_comments(&mut src, &config).unwrap();
+    assert!(src.content.contains("// ***important***"));
+}
+
+#[test]
+fn test_comment_escaped_quote_in_string() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("char* s = \"a\\\"/* not comment */\\\"b\";\n", PathBuf::from("test.c"));
+    fix_comments(&mut src, &config).unwrap();
+    assert!(src.content.contains("/* not comment */"));
 }

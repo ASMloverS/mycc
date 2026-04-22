@@ -24,7 +24,7 @@
 | T04 | `phase1-T04-spacing.md` | Operator/comma/paren/semicolon spacing rules | ✅ Done |
 | T05 | `phase1-T05-braces.md` | Brace attach style (Google) | ✅ Done |
 | T06 | `phase1-T06-blank-lines.md` | Blank line normalization | ✅ Done |
-| T07 | `phase1-T07-comments.md` | `/* */` → `//` conversion (all, including copyright) | ⬜ Stub |
+| T07 | `phase1-T07-comments.md` | `/* */` → `//` conversion (all, including copyright) | ✅ Done |
 | T08 | `phase1-T08-pointer-style.md` | Pointer alignment: `int *p` → `int* p` | ⬜ Stub |
 | T09 | `phase1-T09-switch-indent.md` | switch-case indentation | ⬜ Stub |
 | T10 | `phase1-T10-alignment.md` | Continuation alignment + struct/enum alignment | ⬜ Stub |
