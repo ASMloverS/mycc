@@ -1,152 +1,158 @@
 ### Task 06: Blank Line Normalization
 
 **Files:**
-- Modify: `tools/linter/cclinter/src/formatter/mod.rs`
 - Create: `tools/linter/cclinter/src/formatter/blank_lines.rs`
+- Already registered: `tools/linter/cclinter/src/formatter/mod.rs`
 - Test: `tools/linter/cclinter/tests/formatter_tests.rs`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
-Add to `tests/formatter_tests.rs` (imports assumed from T02):
+Add to `tests/formatter_tests.rs`:
 
 ```rust
 use cclinter::formatter::blank_lines::fix_blank_lines;
 
 #[test]
-fn test_max_consecutive_blank_lines() {
-    let input = "int x;\n\n\n\n\nint y;\n";
-    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
-    let result = fix_blank_lines(&src, 2, 1);
-    assert_eq!(result.content, "int x;\n\n\nint y;\n");
+fn test_blank_collapse_consecutive() {
+    let mut config = FormatConfig::default();
+    config.max_consecutive_blank_lines = 2;
+    let mut src = SourceFile::from_string("int x;\n\n\n\n\nint y;\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert_eq!(src.content, "int x;\n\n\nint y;\n");
 }
 
 #[test]
-fn test_blank_lines_after_include() {
-    let input = "#include <stdio.h>\n#include <stdlib.h>\nint main() {}\n";
-    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
-    let result = fix_blank_lines(&src, 2, 1);
-    assert!(result.content.contains("#include <stdlib.h>\n\nint main()"));
+fn test_blank_collapse_to_one() {
+    let mut config = FormatConfig::default();
+    config.max_consecutive_blank_lines = 1;
+    let mut src = SourceFile::from_string("int x;\n\n\nint y;\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert_eq!(src.content, "int x;\n\nint y;\n");
 }
 
 #[test]
-fn test_no_blank_lines_at_file_start() {
-    let input = "\n\nint x;\n";
-    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
-    let result = fix_blank_lines(&src, 2, 1);
-    assert!(result.content.starts_with("int x;"));
+fn test_blank_after_include() {
+    let mut config = FormatConfig::default();
+    config.blank_lines_after_include = 1;
+    let mut src = SourceFile::from_string("#include <stdio.h>\n#include <stdlib.h>\nint main() {}\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert!(src.content.contains("#include <stdlib.h>\n\nint main()"));
+}
+
+#[test]
+fn test_blank_after_include_two() {
+    let mut config = FormatConfig::default();
+    config.blank_lines_after_include = 2;
+    let mut src = SourceFile::from_string("#include <stdio.h>\nint x;\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert!(src.content.contains("#include <stdio.h>\n\n\nint x;"));
+}
+
+#[test]
+fn test_blank_leading_removed() {
+    let mut config = FormatConfig::default();
+    let mut src = SourceFile::from_string("\n\nint x;\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert!(src.content.starts_with("int x;"));
+}
+
+#[test]
+fn test_blank_trailing_removed() {
+    let mut config = FormatConfig::default();
+    let mut src = SourceFile::from_string("int x;\n\n\n\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert!(src.content.ends_with("int x;\n"));
+}
+
+#[test]
+fn test_blank_before_function() {
+    let mut config = FormatConfig::default();
+    config.blank_lines_before_function = 1;
+    let mut src = SourceFile::from_string("int x;\nvoid f() {\n}\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert!(src.content.contains("int x;\n\nvoid f()"));
+}
+
+#[test]
+fn test_blank_no_change_needed() {
+    let mut config = FormatConfig::default();
+    let mut src = SourceFile::from_string("int x;\n\nint y;\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert_eq!(src.content, "int x;\n\nint y;\n");
+}
+
+#[test]
+fn test_blank_empty_input() {
+    let mut config = FormatConfig::default();
+    let mut src = SourceFile::from_string("", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert_eq!(src.content, "");
+}
+
+#[test]
+fn test_blank_only_whitespace_lines() {
+    let mut config = FormatConfig::default();
+    let mut src = SourceFile::from_string("int x;\n   \n   \nint y;\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert_eq!(src.content, "int x;\n\nint y;\n");
+}
+
+#[test]
+fn test_blank_include_block_multiple_groups() {
+    let mut config = FormatConfig::default();
+    config.blank_lines_after_include = 1;
+    let mut src = SourceFile::from_string(
+        "#include <stdio.h>\n#include <stdlib.h>\n\n#include \"my.h\"\nint x;\n",
+        PathBuf::from("test.c"),
+    );
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert!(src.content.contains("#include \"my.h\"\n\nint x;"));
+}
+
+#[test]
+fn test_blank_preserve_single_newline_ending() {
+    let mut config = FormatConfig::default();
+    let mut src = SourceFile::from_string("int x;\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert_eq!(src.content, "int x;\n");
+}
+
+#[test]
+fn test_blank_no_trailing_newline_input() {
+    let mut config = FormatConfig::default();
+    let mut src = SourceFile::from_string("int x;", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert_eq!(src.content, "int x;");
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
-Run: `cargo test --test formatter_tests test_max_consecutive test_blank_lines_after test_no_blank_lines_at_file_start`
+Run: `cargo test --test formatter_tests test_blank_`
 Expected: FAIL.
 
-- [ ] **Step 3: Create `src/formatter/blank_lines.rs`**
+- [x] **Step 3: Implement `src/formatter/blank_lines.rs`**
 
 ```rust
-use crate::common::source::SourceFile;
-use std::path::PathBuf;
-
-pub fn fix_blank_lines(source: &SourceFile, max_blank: usize, after_include: usize) -> SourceFile {
-    let mut lines: Vec<String> = source.lines.clone();
-    lines = collapse_blank_lines(&lines, max_blank);
-    lines = ensure_blank_after_includes(&lines, after_include);
-    lines = trim_leading_blanks(&lines);
-    let content = lines.join("\n");
-    let has_newline = source.content.ends_with('\n');
-    let final_content = if has_newline && !content.is_empty() {
-        format!("{}\n", content)
-    } else {
-        content
-    };
-    SourceFile::from_string(&final_content, source.path.clone())
-}
-
-fn collapse_blank_lines(lines: &[String], max: usize) -> Vec<String> {
-    let mut result = Vec::new();
-    let mut consecutive = 0usize;
-    for line in lines {
-        if line.trim().is_empty() {
-            consecutive += 1;
-            if consecutive <= max {
-                result.push(line.clone());
-            }
-        } else {
-            consecutive = 0;
-            result.push(line.clone());
-        }
-    }
-    result
-}
-
-fn ensure_blank_after_includes(lines: &[String], count: usize) -> Vec<String> {
-    let mut result = Vec::new();
-    let mut last_was_include = false;
-    let mut blanks_since_include = 0usize;
-    for line in lines {
-        let trimmed = line.trim();
-        if trimmed.starts_with('#') && trimmed.contains("include") {
-            if last_was_include {
-                blanks_since_include = 0;
-            }
-            result.push(line.clone());
-            last_was_include = true;
-            continue;
-        }
-        if last_was_include {
-            if trimmed.is_empty() {
-                blanks_since_include += 1;
-                if blanks_since_include <= count {
-                    result.push(line.clone());
-                }
-            } else {
-                for _ in blanks_since_include..count {
-                    result.push(String::new());
-                }
-                result.push(line.clone());
-                last_was_include = false;
-                blanks_since_include = 0;
-            }
-        } else {
-            result.push(line.clone());
-        }
-    }
-    result
-}
-
-fn trim_leading_blanks(lines: &[String]) -> Vec<String> {
-    let mut start = 0;
-    for (i, line) in lines.iter().enumerate() {
-        if !line.trim().is_empty() {
-            start = i;
-            break;
-        }
-    }
-    lines[start..].to_vec()
+pub fn fix_blank_lines(
+    source: &mut SourceFile,
+    config: &FormatConfig,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Implementation with: trim leading, normalize whitespace, collapse consecutive,
+    // ensure after includes, ensure before functions, trim trailing.
 }
 ```
 
-- [ ] **Step 4: Register module, update pipeline**
+- [x] **Step 4: Already registered in pipeline**
 
-Add `pub mod blank_lines;` to `src/formatter/mod.rs`. Update `format_source` to include:
+`src/formatter/mod.rs` already contains `pub mod blank_lines;` and calls `blank_lines::fix_blank_lines(source, config)?;`.
 
-```rust
-let source = blank_lines::fix_blank_lines(
-    &source,
-    config.format.max_consecutive_blank_lines.unwrap_or(2),
-    config.format.blank_lines_after_include.unwrap_or(1),
-);
-```
-
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cargo test --test formatter_tests`
 Expected: All tests PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Build**
 
-```bash
-git add tools/linter/cclinter/
-git commit -m "✨ feat(cclinter): blank line normalization"
-```
+Run: `cargo build`
+Expected: Success.

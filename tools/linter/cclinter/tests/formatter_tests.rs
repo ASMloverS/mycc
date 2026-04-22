@@ -21,6 +21,7 @@ fn help_flag_works() {
 
 use cclinter::common::source::SourceFile;
 use cclinter::config::{BraceStyle, FormatConfig};
+use cclinter::formatter::blank_lines::fix_blank_lines;
 use cclinter::formatter::braces::fix_braces;
 use cclinter::formatter::encoding::fix_encoding;
 use cclinter::formatter::indent::fix_indent;
@@ -461,4 +462,162 @@ fn test_brace_breakout_struct() {
     let mut src = SourceFile::from_string("struct S {\n  int x;\n};\n", PathBuf::from("test.c"));
     fix_braces(&mut src, &config).unwrap();
     assert!(src.content.contains("struct S\n{"), "struct brace should breakout");
+}
+
+#[test]
+fn test_blank_collapse_consecutive() {
+    let mut config = FormatConfig::default();
+    config.max_consecutive_blank_lines = 2;
+    let mut src = SourceFile::from_string("int x;\n\n\n\n\nint y;\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert_eq!(src.content, "int x;\n\n\nint y;\n");
+}
+
+#[test]
+fn test_blank_collapse_to_one() {
+    let mut config = FormatConfig::default();
+    config.max_consecutive_blank_lines = 1;
+    let mut src = SourceFile::from_string("int x;\n\n\nint y;\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert_eq!(src.content, "int x;\n\nint y;\n");
+}
+
+#[test]
+fn test_blank_after_include() {
+    let mut config = FormatConfig::default();
+    config.blank_lines_after_include = 1;
+    let mut src = SourceFile::from_string("#include <stdio.h>\n#include <stdlib.h>\nint main() {}\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert!(src.content.contains("#include <stdlib.h>\n\nint main()"));
+}
+
+#[test]
+fn test_blank_after_include_two() {
+    let mut config = FormatConfig::default();
+    config.blank_lines_after_include = 2;
+    let mut src = SourceFile::from_string("#include <stdio.h>\nint x;\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert!(src.content.contains("#include <stdio.h>\n\n\nint x;"));
+}
+
+#[test]
+fn test_blank_leading_removed() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("\n\nint x;\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert!(src.content.starts_with("int x;"));
+}
+
+#[test]
+fn test_blank_trailing_removed() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("int x;\n\n\n\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert!(src.content.ends_with("int x;\n"));
+}
+
+#[test]
+fn test_blank_before_function() {
+    let mut config = FormatConfig::default();
+    config.blank_lines_before_function = 1;
+    let mut src = SourceFile::from_string("int x;\nvoid f() {\n}\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert!(src.content.contains("int x;\n\nvoid f()"));
+}
+
+#[test]
+fn test_blank_no_change_needed() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("int x;\n\nint y;\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert_eq!(src.content, "int x;\n\nint y;\n");
+}
+
+#[test]
+fn test_blank_empty_input() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert_eq!(src.content, "");
+}
+
+#[test]
+fn test_blank_only_whitespace_lines() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("int x;\n   \n   \nint y;\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert_eq!(src.content, "int x;\n\nint y;\n");
+}
+
+#[test]
+fn test_blank_include_block_multiple_groups() {
+    let mut config = FormatConfig::default();
+    config.blank_lines_after_include = 1;
+    let mut src = SourceFile::from_string(
+        "#include <stdio.h>\n#include <stdlib.h>\n\n#include \"my.h\"\nint x;\n",
+        PathBuf::from("test.c"),
+    );
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert!(src.content.contains("#include \"my.h\"\n\nint x;"));
+}
+
+#[test]
+fn test_blank_preserve_single_newline_ending() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("int x;\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert_eq!(src.content, "int x;\n");
+}
+
+#[test]
+fn test_blank_no_trailing_newline_input() {
+    let config = FormatConfig::default();
+    let mut src = SourceFile::from_string("int x;", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert_eq!(src.content, "int x;");
+}
+
+#[test]
+fn test_blank_collapse_max_zero() {
+    let mut config = FormatConfig::default();
+    config.max_consecutive_blank_lines = 0;
+    let mut src = SourceFile::from_string("int x;\n\n\nint y;\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert_eq!(src.content, "int x;\nint y;\n");
+}
+
+#[test]
+fn test_blank_before_function_zero() {
+    let mut config = FormatConfig::default();
+    config.blank_lines_before_function = 0;
+    let mut src = SourceFile::from_string("int x;\n\nvoid f() {\n}\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert_eq!(src.content, "int x;\nvoid f() {\n}\n");
+}
+
+#[test]
+fn test_blank_include_at_file_end() {
+    let mut config = FormatConfig::default();
+    config.blank_lines_after_include = 1;
+    let mut src = SourceFile::from_string("#include <stdio.h>\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert_eq!(src.content, "#include <stdio.h>\n");
+}
+
+#[test]
+fn test_blank_function_def_not_matching_for_loop() {
+    let mut config = FormatConfig::default();
+    config.blank_lines_before_function = 1;
+    let mut src = SourceFile::from_string("int x;\nfor (i = 0; i < 10; i++) {\n}\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert_eq!(src.content, "int x;\nfor (i = 0; i < 10; i++) {\n}\n");
+}
+
+#[test]
+fn test_blank_consecutive_functions() {
+    let mut config = FormatConfig::default();
+    config.blank_lines_before_function = 1;
+    let mut src = SourceFile::from_string("void f() {\n}\nvoid g() {\n}\n", PathBuf::from("test.c"));
+    fix_blank_lines(&mut src, &config).unwrap();
+    assert!(src.content.contains("}\n\nvoid g()"));
 }
