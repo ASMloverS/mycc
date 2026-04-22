@@ -20,7 +20,8 @@ fn help_flag_works() {
 }
 
 use cclinter::common::source::SourceFile;
-use cclinter::config::FormatConfig;
+use cclinter::config::{BraceStyle, FormatConfig};
+use cclinter::formatter::braces::fix_braces;
 use cclinter::formatter::encoding::fix_encoding;
 use cclinter::formatter::indent::fix_indent;
 use cclinter::formatter::spacing::fix_spacing;
@@ -308,4 +309,156 @@ fn test_spacing_space_before_paren_enabled() {
     let mut src = SourceFile::from_string("if(x){}\n", PathBuf::from("test.c"));
     fix_spacing(&mut src, &config).unwrap();
     assert!(src.content.contains("if (x)"));
+}
+
+#[test]
+fn test_brace_attach_function() {
+    let mut config = FormatConfig::default();
+    config.brace_style = BraceStyle::Attach;
+    let mut src = SourceFile::from_string("void f()\n{\n  return;\n}\n", PathBuf::from("test.c"));
+    fix_braces(&mut src, &config).unwrap();
+    assert_eq!(src.content, "void f() {\n  return;\n}\n");
+}
+
+#[test]
+fn test_brace_attach_if() {
+    let mut config = FormatConfig::default();
+    config.brace_style = BraceStyle::Attach;
+    let mut src = SourceFile::from_string("if (x)\n{\n  y();\n}\n", PathBuf::from("test.c"));
+    fix_braces(&mut src, &config).unwrap();
+    assert_eq!(src.content, "if (x) {\n  y();\n}\n");
+}
+
+#[test]
+fn test_brace_attach_else() {
+    let mut config = FormatConfig::default();
+    config.brace_style = BraceStyle::Attach;
+    let mut src = SourceFile::from_string("if (x) {\n} else\n{\n  y();\n}\n", PathBuf::from("test.c"));
+    fix_braces(&mut src, &config).unwrap();
+    assert!(src.content.contains("} else {"));
+}
+
+#[test]
+fn test_brace_attach_for() {
+    let mut config = FormatConfig::default();
+    config.brace_style = BraceStyle::Attach;
+    let mut src = SourceFile::from_string("for (;;)\n{\n  break;\n}\n", PathBuf::from("test.c"));
+    fix_braces(&mut src, &config).unwrap();
+    assert_eq!(src.content, "for (;;) {\n  break;\n}\n");
+}
+
+#[test]
+fn test_brace_attach_while() {
+    let mut config = FormatConfig::default();
+    config.brace_style = BraceStyle::Attach;
+    let mut src = SourceFile::from_string("while (1)\n{\n  break;\n}\n", PathBuf::from("test.c"));
+    fix_braces(&mut src, &config).unwrap();
+    assert_eq!(src.content, "while (1) {\n  break;\n}\n");
+}
+
+#[test]
+fn test_brace_attach_struct() {
+    let mut config = FormatConfig::default();
+    config.brace_style = BraceStyle::Attach;
+    let mut src = SourceFile::from_string("struct S\n{\n  int x;\n};\n", PathBuf::from("test.c"));
+    fix_braces(&mut src, &config).unwrap();
+    assert_eq!(src.content, "struct S {\n  int x;\n};\n");
+}
+
+#[test]
+fn test_brace_attach_enum() {
+    let mut config = FormatConfig::default();
+    config.brace_style = BraceStyle::Attach;
+    let mut src = SourceFile::from_string("enum E\n{\n  A,\n  B\n};\n", PathBuf::from("test.c"));
+    fix_braces(&mut src, &config).unwrap();
+    assert_eq!(src.content, "enum E {\n  A,\n  B\n};\n");
+}
+
+#[test]
+fn test_brace_already_attached() {
+    let mut config = FormatConfig::default();
+    config.brace_style = BraceStyle::Attach;
+    let mut src = SourceFile::from_string("void f() {\n  return;\n}\n", PathBuf::from("test.c"));
+    fix_braces(&mut src, &config).unwrap();
+    assert_eq!(src.content, "void f() {\n  return;\n}\n");
+}
+
+#[test]
+fn test_brace_breakout_style_no_change() {
+    let mut config = FormatConfig::default();
+    config.brace_style = BraceStyle::Breakout;
+    let mut src = SourceFile::from_string("void f() {\n  return;\n}\n", PathBuf::from("test.c"));
+    fix_braces(&mut src, &config).unwrap();
+    assert_eq!(src.content, "void f()\n{\n  return;\n}\n");
+}
+
+#[test]
+fn test_brace_attach_preserves_indented_brace() {
+    let mut config = FormatConfig::default();
+    config.brace_style = BraceStyle::Attach;
+    let mut src = SourceFile::from_string("void f()\n  {\n  return;\n  }\n", PathBuf::from("test.c"));
+    fix_braces(&mut src, &config).unwrap();
+    assert!(src.content.starts_with("void f() {"));
+}
+
+#[test]
+fn test_brace_attach_switch() {
+    let mut config = FormatConfig::default();
+    config.brace_style = BraceStyle::Attach;
+    let mut src = SourceFile::from_string("switch (x)\n{\n  case 1:\n    break;\n}\n", PathBuf::from("test.c"));
+    fix_braces(&mut src, &config).unwrap();
+    assert!(src.content.starts_with("switch (x) {"));
+}
+
+#[test]
+fn test_brace_attach_do_while() {
+    let mut config = FormatConfig::default();
+    config.brace_style = BraceStyle::Attach;
+    let mut src = SourceFile::from_string("do\n{\n  x--;\n} while (x > 0);\n", PathBuf::from("test.c"));
+    fix_braces(&mut src, &config).unwrap();
+    assert!(src.content.starts_with("do {"));
+    assert!(src.content.contains("} while (x > 0);"));
+}
+
+#[test]
+fn test_brace_attach_breakout_hybrid() {
+    let mut config = FormatConfig::default();
+    config.brace_style = BraceStyle::AttachBreakout;
+    let mut src = SourceFile::from_string(
+        "void f()\n{\n  if (x)\n  {\n    return;\n  }\n}\nstruct S\n{\n  int x;\n};\n",
+        PathBuf::from("test.c"),
+    );
+    fix_braces(&mut src, &config).unwrap();
+    assert!(src.content.contains("void f() {"), "functions should attach");
+    assert!(src.content.contains("if (x) {"), "control flow should attach");
+    assert!(src.content.contains("struct S\n{"), "structs should breakout");
+}
+
+#[test]
+fn test_brace_attach_preserves_block_comment() {
+    let mut config = FormatConfig::default();
+    config.brace_style = BraceStyle::Attach;
+    let mut src = SourceFile::from_string("/* comment\n{\n*/\nvoid f()\n{\n}\n", PathBuf::from("test.c"));
+    fix_braces(&mut src, &config).unwrap();
+    assert!(src.content.contains("/* comment\n{\n*/"), "block comment with brace should be preserved");
+    assert!(src.content.contains("void f() {"), "real brace should still attach");
+}
+
+#[test]
+fn test_brace_attach_preserves_string_with_brace() {
+    let mut config = FormatConfig::default();
+    config.brace_style = BraceStyle::Attach;
+    let mut src = SourceFile::from_string("char* s = \"{\";\nvoid f()\n{\n}\n", PathBuf::from("test.c"));
+    fix_braces(&mut src, &config).unwrap();
+    assert!(src.content.contains("\"{\""), "string literal with brace preserved");
+    assert!(src.content.contains("void f() {"), "real brace attached");
+}
+
+#[test]
+fn test_brace_breakout_struct() {
+    let mut config = FormatConfig::default();
+    config.brace_style = BraceStyle::Breakout;
+    let mut src = SourceFile::from_string("struct S {\n  int x;\n};\n", PathBuf::from("test.c"));
+    fix_braces(&mut src, &config).unwrap();
+    assert!(src.content.contains("struct S\n{"), "struct brace should breakout");
 }
