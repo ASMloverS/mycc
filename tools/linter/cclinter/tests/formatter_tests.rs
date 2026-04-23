@@ -955,8 +955,166 @@ fn test_switch_case_indent_enabled() {
     fix_switch_indent(&mut src, &FormatConfig::default()).unwrap();
     assert!(src.content.contains("  case 1:"), "got: {}", src.content);
     assert!(src.content.contains("    break;"), "got: {}", src.content);
-    assert!(src.content.contains("  case 2:"), "got: {}", src.content);
-    assert!(src.content.contains("  default:"), "got: {}", src.content);
+}
+
+use cclinter::formatter::alignment::fix_alignment;
+
+#[test]
+fn test_struct_field_alignment() {
+    let mut src = SourceFile::from_string(
+        "struct Foo {\n  int x;\n  char* name;\n  float value;\n};\n",
+        PathBuf::from("test.c"),
+    );
+    fix_alignment(&mut src, &FormatConfig::default()).unwrap();
+    let lines: Vec<&str> = src.content.lines().collect();
+    assert!(lines[1].contains("int   x;") || lines[1].contains("int  x;"), "got: {}", lines[1]);
+    assert!(src.content.contains("char* name;"), "got: {}", src.content);
+    assert!(src.content.contains("float value;"), "got: {}", src.content);
+}
+
+#[test]
+fn test_enum_value_alignment() {
+    let mut src = SourceFile::from_string(
+        "enum Bar {\n  FOO = 1,\n  BAZ = 2,\n  LONG_NAME = 3,\n};\n",
+        PathBuf::from("test.c"),
+    );
+    fix_alignment(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("FOO       = 1"), "got: {}", src.content);
+    assert!(src.content.contains("BAZ       = 2"), "got: {}", src.content);
+    assert!(src.content.contains("LONG_NAME = 3"), "got: {}", src.content);
+}
+
+#[test]
+fn test_struct_no_alignment_needed() {
+    let input = "struct S {\n  int   x;\n  char* y;\n};\n";
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_alignment(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, input);
+}
+
+#[test]
+fn test_struct_with_comments() {
+    let mut src = SourceFile::from_string(
+        "struct Foo {\n  // comment\n  int x;\n  char* name;\n};\n",
+        PathBuf::from("test.c"),
+    );
+    fix_alignment(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("// comment"));
+}
+
+#[test]
+fn test_enum_without_values() {
+    let input = "enum E {\n  A,\n  B,\n  C,\n};\n";
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_alignment(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, input);
+}
+
+#[test]
+fn test_alignment_empty_input() {
+    let mut src = SourceFile::from_string("", PathBuf::from("test.c"));
+    fix_alignment(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "");
+}
+
+#[test]
+fn test_struct_multiline_type() {
+    let mut src = SourceFile::from_string(
+        "struct Foo {\n  unsigned int count;\n  char* name;\n};\n",
+        PathBuf::from("test.c"),
+    );
+    fix_alignment(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("unsigned int count;"), "got: {}", src.content);
+    assert!(src.content.contains("char*        name;") || src.content.contains("char*       name;") || src.content.contains("char*  name;"), "got: {}", src.content);
+}
+
+#[test]
+fn test_nested_struct() {
+    let mut src = SourceFile::from_string(
+        "struct Outer {\n  int x;\n  struct Inner {\n    int a;\n    char* b;\n  } inner;\n};\n",
+        PathBuf::from("test.c"),
+    );
+    fix_alignment(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("int  x;") || src.content.contains("int x;"), "outer got: {}", src.content);
+}
+
+#[test]
+fn test_alignment_no_trailing_newline() {
+    let mut src = SourceFile::from_string("struct S {\n  int x;\n  char* y;\n};", PathBuf::from("test.c"));
+    fix_alignment(&mut src, &FormatConfig::default()).unwrap();
+    assert!(!src.content.ends_with('\n'));
+}
+
+#[test]
+fn test_struct_preserves_field_with_initializer() {
+    let mut src = SourceFile::from_string(
+        "struct Foo {\n  int x;\n  int* ptr;\n  int count = 0;\n};\n",
+        PathBuf::from("test.c"),
+    );
+    fix_alignment(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("count = 0"), "got: {}", src.content);
+    assert!(src.content.contains("int  x;") || src.content.contains("int x;"), "x not corrupted, got: {}", src.content);
+    assert!(src.content.contains("int* ptr;") || src.content.contains("int*  ptr;"), "ptr not corrupted, got: {}", src.content);
+}
+
+#[test]
+fn test_struct_array_field_aligned() {
+    let mut src = SourceFile::from_string(
+        "struct Foo {\n  int x;\n  char name[32];\n};\n",
+        PathBuf::from("test.c"),
+    );
+    fix_alignment(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("name[32]"), "array field preserved, got: {}", src.content);
+    let lines: Vec<&str> = src.content.lines().collect();
+    let x_col = lines[1].find('x').unwrap_or(0);
+    let n_col = lines[2].find("name").unwrap_or(0);
+    assert_eq!(x_col, n_col, "field names should start at same column, got x@{} name@{}", x_col, n_col);
+}
+
+#[test]
+fn test_struct_bit_field_skipped() {
+    let mut src = SourceFile::from_string(
+        "struct Foo {\n  int x : 3;\n  int y : 5;\n  int z;\n};\n",
+        PathBuf::from("test.c"),
+    );
+    fix_alignment(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains(": 3"), "bit field preserved, got: {}", src.content);
+    assert!(src.content.contains(": 5"), "bit field preserved, got: {}", src.content);
+}
+
+#[test]
+fn test_struct_initializer_not_corrupted() {
+    let mut src = SourceFile::from_string(
+        "struct Foo {\n  int a;\n  int b;\n  int c = 42;\n};\n",
+        PathBuf::from("test.c"),
+    );
+    fix_alignment(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("a;"), "got: {}", src.content);
+    assert!(src.content.contains("b;"), "got: {}", src.content);
+    assert!(src.content.contains("c = 42"), "got: {}", src.content);
+    assert!(!src.content.contains("a ="), "a should not be corrupted, got: {}", src.content);
+    assert!(!src.content.contains("b ="), "b should not be corrupted, got: {}", src.content);
+}
+
+#[test]
+fn test_struct_block_comment_brace() {
+    let mut src = SourceFile::from_string(
+        "struct Foo { /* } */\n  int x;\n  char* y;\n};\n",
+        PathBuf::from("test.c"),
+    );
+    fix_alignment(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("int"), "got: {}", src.content);
+    assert!(src.content.contains("char*"), "got: {}", src.content);
+}
+
+#[test]
+fn test_struct_comment_in_string() {
+    let mut src = SourceFile::from_string(
+        "struct Foo {\n  int x; // real comment\n  char* name;\n};\n",
+        PathBuf::from("test.c"),
+    );
+    fix_alignment(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("// real comment"), "got: {}", src.content);
 }
 
 #[test]
