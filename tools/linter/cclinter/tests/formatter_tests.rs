@@ -30,6 +30,9 @@ use cclinter::formatter::spacing::fix_spacing;
 use cclinter::formatter::comments::fix_comments;
 use cclinter::config::CommentStyle;
 
+use cclinter::formatter::pointer_style::fix_pointer_style;
+use cclinter::config::PointerAlignment;
+
 use std::path::PathBuf;
 #[test]
 fn test_strip_trailing_whitespace() {
@@ -767,4 +770,176 @@ fn test_comment_escaped_quote_in_string() {
     let mut src = SourceFile::from_string("char* s = \"a\\\"/* not comment */\\\"b\";\n", PathBuf::from("test.c"));
     fix_comments(&mut src, &config).unwrap();
     assert!(src.content.contains("/* not comment */"));
+}
+
+#[test]
+fn test_pointer_left_align() {
+    let mut src = SourceFile::from_string("int *p;\nchar *s;\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("int* p"), "got: {}", src.content);
+    assert!(src.content.contains("char* s"), "got: {}", src.content);
+}
+
+#[test]
+fn test_pointer_right_align() {
+    let mut config = FormatConfig::default();
+    config.pointer_alignment = PointerAlignment::Right;
+    let mut src = SourceFile::from_string("int* p;\nchar* s;\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &config).unwrap();
+    assert!(src.content.contains("int *p"), "got: {}", src.content);
+    assert!(src.content.contains("char *s"), "got: {}", src.content);
+}
+
+#[test]
+fn test_pointer_no_change_when_correct() {
+    let mut src = SourceFile::from_string("int* p;\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "int* p;\n");
+}
+
+#[test]
+fn test_double_pointer_left() {
+    let mut src = SourceFile::from_string("int **pp;\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("int** pp"), "got: {}", src.content);
+}
+
+#[test]
+fn test_double_pointer_right() {
+    let mut config = FormatConfig::default();
+    config.pointer_alignment = PointerAlignment::Right;
+    let mut src = SourceFile::from_string("int** pp;\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &config).unwrap();
+    assert!(src.content.contains("int **pp"), "got: {}", src.content);
+}
+
+#[test]
+fn test_pointer_skip_preprocessor() {
+    let mut src = SourceFile::from_string("#define PTR int*\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "#define PTR int*\n");
+}
+
+#[test]
+fn test_pointer_skip_comment() {
+    let mut src = SourceFile::from_string("// int *p;\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "// int *p;\n");
+}
+
+#[test]
+fn test_pointer_in_string_literal() {
+    let mut src = SourceFile::from_string("char* s = \"int *p\";\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("\"int *p\""), "got: {}", src.content);
+}
+
+#[test]
+fn test_pointer_empty_input() {
+    let mut src = SourceFile::from_string("", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "");
+}
+
+#[test]
+fn test_pointer_no_trailing_newline() {
+    let mut src = SourceFile::from_string("int *p;", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("int* p"));
+}
+
+#[test]
+fn test_pointer_double_pointer_left() {
+    let mut src = SourceFile::from_string("int **pp;\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("int** pp"), "got: {}", src.content);
+}
+
+#[test]
+fn test_pointer_double_pointer_right() {
+    let mut config = FormatConfig::default();
+    config.pointer_alignment = PointerAlignment::Right;
+    let mut src = SourceFile::from_string("int** pp;\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &config).unwrap();
+    assert!(src.content.contains("int **pp"), "got: {}", src.content);
+}
+
+#[test]
+fn test_pointer_no_corrupt_multiplication() {
+    let mut src = SourceFile::from_string("int result = x * y;\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("x * y"), "got: {}", src.content);
+}
+
+#[test]
+fn test_pointer_no_corrupt_dereference() {
+    let mut src = SourceFile::from_string("return *ptr;\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("return *ptr"), "got: {}", src.content);
+}
+
+#[test]
+fn test_pointer_no_corrupt_if_deref() {
+    let mut src = SourceFile::from_string("if (*ptr == 1) {}\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("if (*ptr"), "got: {}", src.content);
+}
+
+#[test]
+fn test_pointer_block_comment_protected() {
+    let mut src = SourceFile::from_string("/* int *p; */\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("int *p"), "got: {}", src.content);
+}
+
+#[test]
+fn test_pointer_multiline_block_comment_protected() {
+    let mut src = SourceFile::from_string("/*\n * int *p;\n */\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("int *p"), "got: {}", src.content);
+}
+
+#[test]
+fn test_pointer_no_space_normalized_left() {
+    let mut src = SourceFile::from_string("int*p;\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("int* p"), "got: {}", src.content);
+}
+
+#[test]
+fn test_pointer_no_space_normalized_right() {
+    let mut config = FormatConfig::default();
+    config.pointer_alignment = PointerAlignment::Right;
+    let mut src = SourceFile::from_string("int*p;\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &config).unwrap();
+    assert!(src.content.contains("int *p"), "got: {}", src.content);
+}
+
+#[test]
+fn test_pointer_const_qualified() {
+    let mut src = SourceFile::from_string("const char *s;\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("char* s"), "got: {}", src.content);
+}
+
+#[test]
+fn test_pointer_function_pointer_unchanged() {
+    let mut src = SourceFile::from_string("int (*func)(int);\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("int (*func)(int)"), "got: {}", src.content);
+}
+
+#[test]
+fn test_pointer_cast_unchanged() {
+    let mut src = SourceFile::from_string("void* p = (int*)ptr;\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("(int*)ptr"), "cast should be unchanged, got: {}", src.content);
+}
+
+#[test]
+fn test_pointer_multi_decl() {
+    let mut src = SourceFile::from_string("int *a, *b;\n", PathBuf::from("test.c"));
+    fix_pointer_style(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("int* a"), "got: {}", src.content);
+    assert!(src.content.contains("int* b") || src.content.contains("*b"), "got: {}", src.content);
 }
