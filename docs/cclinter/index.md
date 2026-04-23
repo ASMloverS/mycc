@@ -26,7 +26,7 @@
 | T06 | `phase1-T06-blank-lines.md` | Blank line normalization | ✅ Done |
 | T07 | `phase1-T07-comments.md` | `/* */` → `//` conversion (all, including copyright) | ✅ Done |
 | T08 | `phase1-T08-pointer-style.md` | Pointer alignment: `int *p` → `int* p` | ✅ Done |
-| T09 | `phase1-T09-switch-indent.md` | switch-case indentation | ⬜ Stub |
+| T09 | `phase1-T09-switch-indent.md` | switch-case indentation | ✅ Done |
 | T10 | `phase1-T10-alignment.md` | Continuation alignment + struct/enum alignment | ⬜ Stub |
 | T11 | `phase1-T11-line-length.md` | 120-column line wrapping | ⬜ Stub |
 | T12 | `phase1-T12-include-sort.md` | #include Google three-group sorting | ⬜ Stub |

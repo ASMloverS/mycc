@@ -943,3 +943,132 @@ fn test_pointer_multi_decl() {
     assert!(src.content.contains("int* a"), "got: {}", src.content);
     assert!(src.content.contains("int* b") || src.content.contains("*b"), "got: {}", src.content);
 }
+
+use cclinter::formatter::switch_indent::fix_switch_indent;
+
+#[test]
+fn test_switch_case_indent_enabled() {
+    let mut src = SourceFile::from_string(
+        "switch (x) {\ncase 1:\nbreak;\ncase 2:\nbreak;\ndefault:\nbreak;\n}\n",
+        PathBuf::from("test.c"),
+    );
+    fix_switch_indent(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("  case 1:"), "got: {}", src.content);
+    assert!(src.content.contains("    break;"), "got: {}", src.content);
+    assert!(src.content.contains("  case 2:"), "got: {}", src.content);
+    assert!(src.content.contains("  default:"), "got: {}", src.content);
+}
+
+#[test]
+fn test_switch_case_indent_disabled() {
+    let mut config = FormatConfig::default();
+    config.switch_case_indent = false;
+    let input = "switch (x) {\ncase 1:\nbreak;\n}\n";
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_switch_indent(&mut src, &config).unwrap();
+    assert_eq!(src.content, input);
+}
+
+#[test]
+fn test_switch_already_indented() {
+    let mut src = SourceFile::from_string(
+        "switch (x) {\n  case 1:\n  break;\n}\n",
+        PathBuf::from("test.c"),
+    );
+    fix_switch_indent(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("  case 1:"), "got: {}", src.content);
+    assert!(src.content.contains("    break;"), "got: {}", src.content);
+}
+
+#[test]
+fn test_switch_nested() {
+    let mut src = SourceFile::from_string(
+        "switch (x) {\ncase 1:\nswitch (y) {\ncase 1:\nbreak;\n}\nbreak;\n}\n",
+        PathBuf::from("test.c"),
+    );
+    fix_switch_indent(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("  case 1:"), "got: {}", src.content);
+    assert!(src.content.contains("  switch (y)"), "got: {}", src.content);
+    assert!(src.content.contains("    case 1:"), "got: {}", src.content);
+    assert!(
+        src.content.contains("      break;"),
+        "inner break at 6, got: {}",
+        src.content
+    );
+}
+
+#[test]
+fn test_switch_with_braces_in_case() {
+    let mut src = SourceFile::from_string(
+        "switch (x) {\ncase 1: {\nint y = 1;\nbreak;\n}\ndefault:\nbreak;\n}\n",
+        PathBuf::from("test.c"),
+    );
+    fix_switch_indent(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("  case 1: {"), "got: {}", src.content);
+    assert!(src.content.contains("  }"), "inner brace at body_indent, got: {}", src.content);
+    assert!(src.content.contains("  default:"), "got: {}", src.content);
+}
+
+#[test]
+fn test_switch_empty_input() {
+    let mut src = SourceFile::from_string("", PathBuf::from("test.c"));
+    fix_switch_indent(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, "");
+}
+
+#[test]
+fn test_switch_no_trailing_newline() {
+    let mut src =
+        SourceFile::from_string("switch (x) {\ncase 1:\nbreak;\n}", PathBuf::from("test.c"));
+    fix_switch_indent(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("  case 1:"));
+}
+
+#[test]
+fn test_switch_custom_indent_width() {
+    let mut config = FormatConfig::default();
+    config.indent_width = 4;
+    let mut src = SourceFile::from_string(
+        "switch (x) {\ncase 1:\nbreak;\n}\n",
+        PathBuf::from("test.c"),
+    );
+    fix_switch_indent(&mut src, &config).unwrap();
+    assert!(src.content.contains("    case 1:"), "got: {}", src.content);
+    assert!(src.content.contains("        break;"), "got: {}", src.content);
+}
+
+#[test]
+fn test_switch_deref_not_treated_as_comment() {
+    let mut src = SourceFile::from_string(
+        "switch (x) {\ncase 1:\n*ptr = 1;\nbreak;\n}\n",
+        PathBuf::from("test.c"),
+    );
+    fix_switch_indent(&mut src, &FormatConfig::default()).unwrap();
+    assert!(
+        src.content.contains("    *ptr = 1;"),
+        "deref should be at content_indent, got: {}",
+        src.content
+    );
+}
+
+#[test]
+fn test_switch_empty_one_line() {
+    let mut src = SourceFile::from_string(
+        "switch (x) {}\nint y = 1;\nswitch (z) {\ncase 1:\nbreak;\n}\n",
+        PathBuf::from("test.c"),
+    );
+    fix_switch_indent(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("  case 1:"), "second switch should still work, got: {}", src.content);
+    assert!(src.content.contains("    break;"), "got: {}", src.content);
+}
+
+#[test]
+fn test_switch_block_comment_brace_not_counted() {
+    let mut src = SourceFile::from_string(
+        "switch (x) { /* } */\ncase 1:\nbreak;\n}\n",
+        PathBuf::from("test.c"),
+    );
+    fix_switch_indent(&mut src, &FormatConfig::default()).unwrap();
+    assert!(src.content.contains("  case 1:"), "got: {}", src.content);
+    assert!(src.content.contains("    break;"), "got: {}", src.content);
+}

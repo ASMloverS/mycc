@@ -8,6 +8,7 @@ pub mod indent;
 pub mod line_length;
 pub mod pointer_style;
 pub mod spacing;
+pub mod switch_indent;
 
 use crate::common::diag::Diagnostic;
 use crate::common::source::SourceFile;
@@ -24,6 +25,7 @@ pub fn format_source(
     blank_lines::fix_blank_lines(source, config)?;
     comments::fix_comments(source, config)?;
     pointer_style::fix_pointer_style(source, config)?;
+    switch_indent::fix_switch_indent(source, config)?;
     line_length::fix_line_length(source, config)?;
     alignment::fix_alignment(source, config)?;
     include_sort::fix_include_sort(source, config)?;
