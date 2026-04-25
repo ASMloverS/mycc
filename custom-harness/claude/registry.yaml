@@ -2,6 +2,7 @@ agents:
   bug-fixer:        { path: agents/bug-fixer.md,        desc: "Debug→doc→TDD fix→clean→simplify→review" }
   code-implementer: { path: agents/code-implementer.md, desc: "TDD impl for C/C++/Python/Go/TS/Rust" }
   code-reviewer:    { path: agents/code-reviewer.md,    desc: "Review impl against design doc/spec" }
+  dev-cycle:        { path: agents/dev-cycle.md,        desc: "Dev cycle: implement→review→fix loop→doc update" }
   doc-corrector:    { path: agents/doc-corrector.md,    desc: "Corrects docs to match current code" }
   doc-designer:     { path: agents/doc-designer.md,     desc: "Generates design docs and splits tasks" }
   doc-fixer:        { path: agents/doc-fixer.md,        desc: "Fixes doc vulnerabilities and contradictions" }
