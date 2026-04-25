@@ -228,11 +228,12 @@ def main() -> None:
         print(json.dumps(payloads, ensure_ascii=False, indent=2))
         return
 
-    if len(clean) < 2:
+    if not clean:
         print_help(registry)
         sys.exit(0)
 
-    name_token, user_prompt = clean[0], " ".join(clean[1:])
+    name_token = clean[0]
+    user_prompt = " ".join(clean[1:])
     print(json.dumps(build_payload(registry, name_token, user_prompt, model, bg),
                      ensure_ascii=False, indent=2))
 

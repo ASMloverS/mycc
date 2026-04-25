@@ -7,7 +7,9 @@ description: User-invoked router. Spawn registered agent/command/skill as one-sh
 
 ## Invoke
 
-User: `/dispatch <name|type:name> <prompt>` [`--model M`] [`--bg`] [`--help [name]`]
+User: `/dispatch <name|type:name> [<prompt>]` [`--model M`] [`--bg`] [`--help [name]`]
+
+If `<prompt>` is omitted, the agent receives an empty `User Input` block — agents that document defaults (like `vsc-committer`) will run with those defaults.
 
 Parallel: `/dispatch --parallel "name1 prompt1" "name2 prompt2" …` [`--model M`] [`--bg`]
 Each quoted token: first word = name, rest = prompt.

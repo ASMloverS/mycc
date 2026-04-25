@@ -7,16 +7,21 @@ model: claude-haiku-4-5-20251001
 
 ## Input
 
-CLI-style arguments passed as context:
+CLI-style arguments passed as context. **All arguments are optional.** Empty input → operate on CWD with auto-detected VCS, no push, default filters, auto-generated message.
 
 `[DIR] [--push] [--include=P] [--exclude=P] [--svn] [<msg-hint>]`
 
-- `DIR` — target directory (default `.`, absolute path resolved)
+- `DIR` — target directory (default `.` = current working directory; absolute path resolved)
 - `--push` — push after commit (git only; svn commit ≡ push, flag ignored)
 - `--include=P` — force-include pattern P (remove from skip list)
 - `--exclude=P` — extra-exclude pattern P (add to skip list)
 - `--svn` — force svn mode regardless of directory structure
 - `<msg-hint>` — user intent hint; combined with diff to produce final message
+
+**Parsing rules:**
+- If the user input is empty, whitespace-only, or contains only flags (no positional), treat `DIR` as `.`.
+- The first positional that does **not** start with `-` and is **not** a recognized flag's value is `DIR` if it resolves to an existing directory; otherwise it is the `<msg-hint>`.
+- Any remaining unrecognized positional text is the `<msg-hint>`.
 
 ## Step 1 — VCS Detection (run in DIR)
 
