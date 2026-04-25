@@ -9,9 +9,6 @@ agents:
   doc-reviewer:     { path: agents/doc-reviewer.md,     desc: "Read-only doc auditor for gaps/risks" }
   vsc-committer:    { path: agents/vsc-committer.md,    desc: "Git/SVN add+commit w/ smart filtering, gitmoji (git) / plain (svn) msg, optional push" }
 
-commands:
-  dev-flow:   { path: commands/dev-flow.md,   desc: "Dev cycle: implement→review→fix→doc update" }
-
 skills:
   doc-refine: { path: skills/doc-refine/SKILL.md, desc: "Ultra-compress docs (EN caveman / CN 文言文)" }
   doc-sync:   { path: skills/doc-sync/SKILL.md,   desc: "Align Markdown docs with current code" }
