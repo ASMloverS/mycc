@@ -56,10 +56,17 @@ While findings contain CRITICAL or MAJOR:
 ## Step 4 — Doc Status Update
 
 Only if `spec_path` exists:
-1. Glob: `tasks/` sibling dir + same dir → `.md` files
-2. Grep: `[ ]` checkboxes or `status:` fields matching task name/description from spec
-3. Edit: `[ ] ` → `[x] ` · `status: pending` → `status: done`
-4. No match → print `no task doc found, skipping status update`
+1. Resolve TASKS index:
+   - Check `spec_path` dir for a file named `TASKS.md` (e.g. `docs/TASKS.md`)
+   - Fallback: Glob `tasks/` sibling dir + same dir → `.md` files
+2. Extract task identifier from spec: T-number (e.g. `T18`), task title, or filename stem.
+3. Grep TASKS index for a line matching that identifier.
+4. Determine current status marker on that line:
+   - `⬜` (Unicode U+2B1C) → replace with `✅` (U+2705)  ← preferred format
+   - `[ ]` → replace with `[x]`                          ← fallback checkbox format
+   - `status: pending` → `status: done`                   ← fallback key-value format
+5. Edit: replace only the status marker on that specific line (Read before Edit).
+6. No match → print `no task doc found for <identifier>, skipping status update`
 
 ## Output
 

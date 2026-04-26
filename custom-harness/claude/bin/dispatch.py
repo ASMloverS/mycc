@@ -60,10 +60,13 @@ def resolve_name(registry: dict, token: str) -> tuple[str, str, dict]:
     """Return (type, name, entry). Exits on ambiguity or unknown name."""
     if ":" in token:
         type_, name = token.split(":", 1)
-        section = registry.get(type_)
-        if section and name in section:
-            return type_, name, section[name]
-        _die(f"Not found: {token!r}", 2)
+        if name:  # type:name format
+            section = registry.get(type_)
+            if section and name in section:
+                return type_, name, section[name]
+            _die(f"Not found: {token!r}", 2)
+        else:
+            token = type_  # trailing colon (e.g. "dev-cycle:") → strip, fall through
 
     matches = []
     for type_, section in registry.items():
@@ -100,7 +103,8 @@ def parse_md(md_path: Path) -> tuple[dict, str]:
     return fm, body
 
 
-def assemble_prompt(type_: str, name: str, body: str, fm: dict, user_prompt: str) -> str:
+def assemble_prompt(type_: str, name: str, body: str, fm: dict, user_prompt: str,
+                    harness_dir: Path | None = None) -> str:
     tools = fm.get("tools", "")
     tool_hint = (
         f"\nTool access guidance (soft): originally authored for tools = [{tools}]."
@@ -108,6 +112,7 @@ def assemble_prompt(type_: str, name: str, body: str, fm: dict, user_prompt: str
         if tools
         else ""
     )
+    harness_hint = f"\nHARNESS_DIR = {harness_dir}\n" if harness_dir else ""
     return (
         "You are a one-shot general-purpose subagent executing the definition below.\n"
         "Follow it literally.\n\n"
@@ -115,6 +120,7 @@ def assemble_prompt(type_: str, name: str, body: str, fm: dict, user_prompt: str
         f"{body.strip()}\n"
         "<!-- END -->\n"
         f"{tool_hint}"
+        f"{harness_hint}"
         "\n---\n## User Input\n"
         f"{user_prompt}"
     )
@@ -171,7 +177,7 @@ def build_payload(registry: dict, name_token: str, user_prompt: str,
     payload: dict = {
         "subagent_type": "general-purpose",
         "description": entry["desc"][:50],
-        "prompt": assemble_prompt(type_, name, body, fm, user_prompt),
+        "prompt": assemble_prompt(type_, name, body, fm, user_prompt, harness_dir=HARNESS_DIR),
     }
     effective_model = model or fm.get("model")
     if effective_model:
