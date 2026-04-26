@@ -1216,8 +1216,132 @@ fn test_switch_empty_one_line() {
         PathBuf::from("test.c"),
     );
     fix_switch_indent(&mut src, &FormatConfig::default()).unwrap();
-    assert!(src.content.contains("  case 1:"), "second switch should still work, got: {}", src.content);
+    assert!(src.content.contains("  case 1:"), "got: {}", src.content);
     assert!(src.content.contains("    break;"), "got: {}", src.content);
+}
+
+use cclinter::formatter::line_length::fix_line_length;
+
+#[test]
+fn test_wrap_long_line() {
+    let input = "int very_long_variable_name = some_function_with_many_args(arg1, arg2, arg3, arg4, arg5, arg6, arg7);\n";
+    let mut config = FormatConfig::default();
+    config.column_limit = 80;
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_line_length(&mut src, &config).unwrap();
+    for line in src.content.lines() {
+        assert!(
+            line.chars().count() <= 80,
+            "Line too long: {} (len={})",
+            line,
+            line.chars().count()
+        );
+    }
+}
+
+#[test]
+fn test_no_break_inside_string_literal() {
+    let long_str = "x".repeat(100);
+    let input = format!("char *s = \"{}\";\n", long_str);
+    let mut config = FormatConfig::default();
+    config.column_limit = 80;
+    let mut src = SourceFile::from_string(&input, PathBuf::from("test.c"));
+    fix_line_length(&mut src, &config).unwrap();
+    assert!(
+        src.content.contains(&long_str),
+        "String literal should not be split, got: {}",
+        src.content
+    );
+}
+
+#[test]
+fn test_no_break_preprocessor_directive() {
+    let input = "#include \"some/very/deeply/nested/header/path/that/exceeds/the/column/limit.h\"\n";
+    let mut config = FormatConfig::default();
+    config.column_limit = 80;
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_line_length(&mut src, &config).unwrap();
+    assert_eq!(
+        src.content, input,
+        "Preprocessor directive should not be wrapped"
+    );
+}
+
+#[test]
+fn test_no_wrap_line_at_exact_limit() {
+    let content = "x".repeat(80);
+    let input = format!("{}\n", content);
+    let mut config = FormatConfig::default();
+    config.column_limit = 80;
+    let mut src = SourceFile::from_string(&input, PathBuf::from("test.c"));
+    fix_line_length(&mut src, &config).unwrap();
+    assert_eq!(
+        src.content, input,
+        "Line at exact limit should not be wrapped"
+    );
+}
+
+#[test]
+fn test_no_hard_split_long_identifier() {
+    let ident = "x".repeat(100);
+    let input = format!("int {} = 0;\n", ident);
+    let mut config = FormatConfig::default();
+    config.column_limit = 80;
+    let mut src = SourceFile::from_string(&input, PathBuf::from("test.c"));
+    fix_line_length(&mut src, &config).unwrap();
+    assert!(
+        src.content.contains(&ident),
+        "Long identifier should not be hard-split, got: {}",
+        src.content
+    );
+}
+
+#[test]
+fn test_line_length_empty_input() {
+    let input = "";
+    let mut config = FormatConfig::default();
+    config.column_limit = 80;
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_line_length(&mut src, &config).unwrap();
+    assert_eq!(src.content, "", "Empty input should remain empty");
+}
+
+#[test]
+fn test_line_length_whitespace_only_line() {
+    let input = "    \n";
+    let mut config = FormatConfig::default();
+    config.column_limit = 80;
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_line_length(&mut src, &config).unwrap();
+    assert_eq!(src.content, input, "Whitespace-only line should be unchanged");
+}
+
+#[test]
+fn test_no_wrap_short_line() {
+    let input = "int x = 1;\n";
+    let mut config = FormatConfig::default();
+    config.column_limit = 80;
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_line_length(&mut src, &config).unwrap();
+    assert_eq!(src.content, input);
+}
+
+#[test]
+fn test_wrap_preserves_indent() {
+    let input = "    int result = very_long_function_name_that_exceeds_the_column_limit_by_a_lot(a, b);\n";
+    let mut config = FormatConfig::default();
+    config.column_limit = 60;
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_line_length(&mut src, &config).unwrap();
+    let lines: Vec<&str> = src.content.lines().collect();
+    assert!(lines.len() > 1, "Should have wrapped into multiple lines");
+    for line in &lines[1..] {
+        assert!(
+            line.starts_with("    "),
+            "Continuation should preserve base indent, got: {}",
+            line
+        );
+    }
 }
 
 #[test]

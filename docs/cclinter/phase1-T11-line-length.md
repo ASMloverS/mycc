@@ -5,7 +5,7 @@
 - Create: `tools/linter/cclinter/src/formatter/line_length.rs`
 - Test: `tools/linter/cclinter/tests/formatter_tests.rs`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Add to `tests/formatter_tests.rs` (imports assumed from T02):
 
@@ -42,12 +42,12 @@ fn test_wrap_preserves_indent() {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run: `cargo test --test formatter_tests test_wrap_long test_no_wrap_short test_wrap_preserves_indent`
 Expected: FAIL.
 
-- [ ] **Step 3: Create `src/formatter/line_length.rs`**
+- [x] **Step 3: Create `src/formatter/line_length.rs`**
 
 ```rust
 use crate::common::source::SourceFile;
@@ -115,7 +115,7 @@ fn find_break_point(line: &str, limit: usize) -> usize {
 }
 ```
 
-- [ ] **Step 4: Register module, update pipeline**
+- [x] **Step 4: Register module, update pipeline**
 
 Add `pub mod line_length;` to `src/formatter/mod.rs`. Update `format_source`:
 
@@ -126,12 +126,12 @@ let source = line_length::fix_line_length(
 );
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cargo test --test formatter_tests`
 Expected: All tests PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tools/linter/cclinter/
