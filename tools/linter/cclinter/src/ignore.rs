@@ -32,6 +32,7 @@ fn expand_patterns(pat: &str) -> Vec<String> {
         results.push(format!("{pat}/**"));
     } else if !has_glob && !has_sep {
         results.push(format!("**/{pat}/**"));
+        results.push(format!("**/{pat}"));
     } else if !has_glob || has_trailing_slash {
         results.push(format!("{pat}/**"));
     } else {
