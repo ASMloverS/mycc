@@ -24,8 +24,8 @@ pub struct Args {
     #[arg(long)]
     pub format_only: bool,
 
-    #[arg(long, value_enum, default_value = "none")]
-    pub analysis_level: AnalysisLevel,
+    #[arg(long, value_enum)]
+    pub analysis_level: Option<AnalysisLevel>,
 
     #[arg(short, long)]
     pub jobs: Option<usize>,
@@ -43,8 +43,10 @@ pub struct Args {
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
 
-    let mut config = load_config(args.config.as_ref());
-    config.analysis.level = args.analysis_level.clone();
+    let mut config = load_config(args.config.as_ref())?;
+    if let Some(level) = args.analysis_level {
+        config.analysis.level = level;
+    }
 
     if args.verbose {
         eprintln!("config: {config:?}");

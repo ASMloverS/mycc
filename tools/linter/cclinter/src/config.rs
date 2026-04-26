@@ -4,8 +4,8 @@ use std::path::PathBuf;
 #[derive(Clone, Debug, Default, PartialEq, Eq, clap::ValueEnum, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum AnalysisLevel {
-    #[default]
     None,
+    #[default]
     Basic,
     Strict,
     Deep,
@@ -34,6 +34,7 @@ pub enum BraceStyle {
 pub enum IncludeSorting {
     #[default]
     Google,
+    #[serde(rename = "none")]
     Disabled,
 }
 
@@ -257,22 +258,60 @@ impl Default for Config {
     }
 }
 
-pub fn load_config(path: Option<&PathBuf>) -> Config {
-    match path {
-        Some(p) if p.exists() => {
-            let content = match std::fs::read_to_string(p) {
-                Ok(c) => c,
-                Err(e) => {
-                    eprintln!("warning: cannot read config {}: {e}", p.display());
-                    return Config::default();
-                }
-            };
-            serde_yaml::from_str(&content).unwrap_or_else(|e| {
-                eprintln!("warning: invalid config {}: {e}", p.display());
-                Config::default()
-            })
+const CONFIG_FILENAME: &str = ".cclinter.yaml";
+
+pub fn find_config() -> Result<Option<PathBuf>, Box<dyn std::error::Error>> {
+    let cwd = std::env::current_dir()?;
+    let config_name = PathBuf::from(CONFIG_FILENAME);
+
+    let cwd_config = cwd.join(&config_name);
+    if cwd_config.exists() {
+        return Ok(Some(cwd_config));
+    }
+
+    let mut dir = cwd.as_path();
+    while let Some(parent) = dir.parent() {
+        let parent_config = parent.join(&config_name);
+        if parent_config.exists() {
+            return Ok(Some(parent_config));
         }
-        _ => Config::default(),
+        dir = parent;
+    }
+
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(exe_dir) = exe.parent() {
+            let exe_config = exe_dir.join(&config_name);
+            if exe_config.exists() {
+                return Ok(Some(exe_config));
+            }
+        }
+    }
+
+    Ok(None)
+}
+
+pub fn load_config(
+    path: Option<&PathBuf>,
+) -> Result<Config, Box<dyn std::error::Error>> {
+    let config_path = match path {
+        Some(p) => {
+            if !p.exists() {
+                return Err(format!("config file not found: {}", p.display()).into());
+            }
+            Some(p.clone())
+        }
+        None => find_config()?,
+    };
+
+    match config_path {
+        Some(p) => {
+            let content = std::fs::read_to_string(&p)
+                .map_err(|e| format!("cannot read config {}: {e}", p.display()))?;
+            let config: Config = serde_yaml::from_str(&content)
+                .map_err(|e| format!("invalid config {}: {e}", p.display()))?;
+            Ok(config)
+        }
+        None => Ok(Config::default()),
     }
 }
 
