@@ -34,7 +34,7 @@
 | T14 | `phase1-T14-ignore.md` | `.cclinterignore` support | ✅ Done |
 | T15 | `phase1-T15-modes.md` | `--diff` / `--check` / `-i` modes | ✅ Done |
 | T16 | `phase1-T16-parallel.md` | rayon parallel file processing | ✅ Done |
-| T17 | `phase1-T17-tests.md` | Unit tests + snapshot test framework | ⬜ Stub |
+| T17 | `phase1-T17-tests.md` | Unit tests + snapshot test framework | ✅ Done |
 
 ## Phase 2 — Style Checking
 
