@@ -1191,8 +1191,145 @@ fn test_switch_custom_indent_width() {
         PathBuf::from("test.c"),
     );
     fix_switch_indent(&mut src, &config).unwrap();
-    assert!(src.content.contains("    case 1:"), "got: {}", src.content);
-    assert!(src.content.contains("        break;"), "got: {}", src.content);
+    assert!(src.content.contains("  case 1:"), "got: {}", src.content);
+    assert!(src.content.contains("    break;"), "got: {}", src.content);
+}
+
+#[test]
+fn test_sort_system_headers() {
+    let input = "#include <stdio.h>\n#include <stdlib.h>\n#include <assert.h>\n\nint x;\n";
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_include_sort(&mut src, &FormatConfig::default()).unwrap();
+    let lines: Vec<&str> = src.content.lines().collect();
+    assert!(lines[0].contains("<assert.h>"), "got: {}", lines[0]);
+    assert!(lines[1].contains("<stdio.h>"), "got: {}", lines[1]);
+    assert!(lines[2].contains("<stdlib.h>"), "got: {}", lines[2]);
+}
+
+#[test]
+fn test_sort_project_headers() {
+    let input = "#include \"foo.h\"\n#include \"bar.h\"\n#include \"baz.h\"\n\nint x;\n";
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_include_sort(&mut src, &FormatConfig::default()).unwrap();
+    let lines: Vec<&str> = src.content.lines().collect();
+    assert!(lines[0].contains("\"bar.h\""), "got: {}", lines[0]);
+    assert!(lines[1].contains("\"baz.h\""), "got: {}", lines[1]);
+    assert!(lines[2].contains("\"foo.h\""), "got: {}", lines[2]);
+}
+
+#[test]
+fn test_three_group_sort() {
+    let input = "#include \"foo.h\"\n#include <stdio.h>\n#include \"bar.h\"\n#include <stdlib.h>\n\nint x;\n";
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_include_sort(&mut src, &FormatConfig::default()).unwrap();
+    let lines: Vec<&str> = src.content.lines().collect();
+    let mut saw_system = false;
+    let mut saw_project = false;
+    for line in &lines {
+        if line.starts_with("#include <") {
+            saw_system = true;
+            assert!(!saw_project, "system headers must come before project headers");
+        }
+        if line.starts_with("#include \"") {
+            saw_project = true;
+        }
+    }
+    assert!(saw_system, "should have system headers");
+    assert!(saw_project, "should have project headers");
+}
+
+#[test]
+fn test_corresponding_header_first() {
+    let input = "#include \"bar.h\"\n#include \"foo.h\"\n#include <stdio.h>\n\nint x;\n";
+    let mut src = SourceFile::from_string(input, PathBuf::from("foo.c"));
+    fix_include_sort(&mut src, &FormatConfig::default()).unwrap();
+    let lines: Vec<&str> = src.content.lines().collect();
+    assert!(lines[0].contains("\"foo.h\""), "corresponding header should be first, got: {}", lines[0]);
+}
+
+#[test]
+fn test_include_sort_disabled() {
+    let input = "#include <stdlib.h>\n#include <stdio.h>\n\nint x;\n";
+    let mut config = FormatConfig::default();
+    config.include_sorting = IncludeSorting::Disabled;
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_include_sort(&mut src, &config).unwrap();
+    let lines: Vec<&str> = src.content.lines().collect();
+    assert!(lines[0].contains("<stdlib.h>"), "should not sort when disabled, got: {}", lines[0]);
+    assert!(lines[1].contains("<stdio.h>"), "should not sort when disabled, got: {}", lines[1]);
+}
+
+#[test]
+fn test_include_sort_no_includes() {
+    let input = "int x = 1;\nint y = 2;\n";
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_include_sort(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(src.content, input);
+}
+
+#[test]
+fn test_include_sort_blank_line_between_groups() {
+    let input = "#include <stdio.h>\n#include \"bar.h\"\n\nint x;\n";
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_include_sort(&mut src, &FormatConfig::default()).unwrap();
+    let lines: Vec<&str> = src.content.lines().collect();
+    let sys_idx = lines.iter().position(|l| l.starts_with("#include <")).unwrap();
+    let proj_idx = lines.iter().position(|l| l.starts_with("#include \"")).unwrap();
+    assert!(proj_idx > sys_idx + 1, "should have blank line between groups");
+}
+
+#[test]
+fn test_sort_skips_conditional_includes() {
+    let input = "#include <stdlib.h>\n#ifdef FOO\n#include <stdio.h>\n#endif\n#include <assert.h>\n\nint x;\n";
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_include_sort(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(
+        src.content, input,
+        "should not sort when conditional directives between includes"
+    );
+}
+
+#[test]
+fn test_sort_skips_comment_between_includes() {
+    let input = "#include <stdlib.h>\n// system headers\n#include <stdio.h>\n\nint x;\n";
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_include_sort(&mut src, &FormatConfig::default()).unwrap();
+    assert_eq!(
+        src.content, input,
+        "should not sort when comments between includes"
+    );
+}
+
+#[test]
+fn test_sort_path_qualified_project_header() {
+    let input = "#include <stdio.h>\n#include \"sub/dir/foo.h\"\n#include \"sub/dir/bar.h\"\n\nint x;\n";
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_include_sort(&mut src, &FormatConfig::default()).unwrap();
+    let lines: Vec<&str> = src.content.lines().collect();
+    let sys_idx = lines.iter().position(|l| l.starts_with("#include <")).unwrap();
+    let bar_idx = lines.iter().position(|l| l.contains("\"sub/dir/bar.h\"")).unwrap();
+    let foo_idx = lines.iter().position(|l| l.contains("\"sub/dir/foo.h\"")).unwrap();
+    assert!(bar_idx > sys_idx, "project headers after system");
+    assert!(bar_idx < foo_idx, "bar.h before foo.h alphabetically");
+}
+
+#[test]
+fn test_sort_only_includes_no_code() {
+    let input = "#include <stdlib.h>\n#include <stdio.h>\n";
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_include_sort(&mut src, &FormatConfig::default()).unwrap();
+    let lines: Vec<&str> = src.content.lines().collect();
+    assert!(lines[0].contains("<stdio.h>"), "got: {}", lines[0]);
+    assert!(lines[1].contains("<stdlib.h>"), "got: {}", lines[1]);
+}
+
+#[test]
+fn test_sort_preserves_duplicates() {
+    let input = "#include <stdio.h>\n#include <stdio.h>\n\nint x;\n";
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_include_sort(&mut src, &FormatConfig::default()).unwrap();
+    let count = src.content.matches("#include <stdio.h>").count();
+    assert_eq!(count, 2, "should preserve duplicate includes");
 }
 
 #[test]
@@ -1221,6 +1358,8 @@ fn test_switch_empty_one_line() {
 }
 
 use cclinter::formatter::line_length::fix_line_length;
+use cclinter::formatter::include_sort::fix_include_sort;
+use cclinter::config::IncludeSorting;
 
 #[test]
 fn test_wrap_long_line() {

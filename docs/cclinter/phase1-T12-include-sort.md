@@ -5,7 +5,7 @@
 - Create: `tools/linter/cclinter/src/formatter/include_sort.rs`
 - Test: `tools/linter/cclinter/tests/formatter_tests.rs`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Add to `tests/formatter_tests.rs` (imports assumed from T02):
 
@@ -54,12 +54,12 @@ fn test_three_group_sort() {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run: `cargo test --test formatter_tests test_sort_system test_sort_project test_three_group_sort`
 Expected: FAIL.
 
-- [ ] **Step 3: Create `src/formatter/include_sort.rs`**
+- [x] **Step 3: Create `src/formatter/include_sort.rs`**
 
 ```rust
 use crate::common::source::SourceFile;
@@ -138,7 +138,7 @@ pub fn fix_include_sort(source: &SourceFile) -> SourceFile {
 }
 ```
 
-- [ ] **Step 4: Register module, update pipeline**
+- [x] **Step 4: Register module, update pipeline**
 
 Add `pub mod include_sort;` to `src/formatter/mod.rs`. Update `format_source`:
 
@@ -146,12 +146,12 @@ Add `pub mod include_sort;` to `src/formatter/mod.rs`. Update `format_source`:
 let source = include_sort::fix_include_sort(&source);
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cargo test --test formatter_tests`
 Expected: All tests PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tools/linter/cclinter/

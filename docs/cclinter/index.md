@@ -29,7 +29,7 @@
 | T09 | `phase1-T09-switch-indent.md` | switch-case indentation | ✅ Done |
 | T10 | `phase1-T10-alignment.md` | Continuation alignment + struct/enum alignment | ✅ Done |
 | T11 | `phase1-T11-line-length.md` | 120-column line wrapping | ✅ Done |
-| T12 | `phase1-T12-include-sort.md` | #include Google three-group sorting | ⬜ Stub |
+| T12 | `phase1-T12-include-sort.md` | #include Google three-group sorting | ✅ Done |
 | T13 | `phase1-T13-config.md` | YAML config loading + directory lookup | ✅ Done |
 | T14 | `phase1-T14-ignore.md` | `.cclinterignore` support | ⬜ Stub |
 | T15 | `phase1-T15-modes.md` | `--diff` / `--check` / `-i` modes | ⬜ Stub |
