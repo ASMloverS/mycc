@@ -32,8 +32,10 @@
 ~/.claude/custom-harness/bin/
 ├── dev-cycle/
 │   └── task-status.py      ← 替代 dev-cycle Step 4 全部 LLM 启发式
-└── review/
-    └── parse-review.py     ← 解析 <REVIEW_RESULT> 块，判定 pass/fail
+├── code-reviewer/
+│   └── parse-review.py     ← 解析 <REVIEW_RESULT> 块，判定 pass/fail
+└── vsc-committer/
+    └── vsc-commit.py       ← 含 gitmoji 校验的 VCS 提交脚本
 ```
 
 ### 修改文件
@@ -41,7 +43,7 @@
 | 文件 | 改动要点 |
 |------|---------|
 | `~/.claude/custom-harness/bin/dispatch.py` | 输出统一 envelope `{mode, payloads}` |
-| `~/.claude/custom-harness/bin/vsc-commit.py` | 新增 `validate_msg()` + 集成到 commit 路径 |
+| `~/.claude/custom-harness/bin/vsc-committer/vsc-commit.py` | 新增 `validate_msg()` + 集成到 commit 路径 |
 | `~/.claude/custom-harness/agents/dev-cycle.md` | Step 3 接 parse-review.py；Step 4 调 task-status.py |
 | `~/.claude/custom-harness/agents/code-reviewer.md` | 末尾追加 `<REVIEW_RESULT>` 输出契约 |
 | `~/.claude/custom-harness/agents/code-implementer.md` | 末尾追加 `<IMPL_RESULT>` 输出契约 |
@@ -85,7 +87,7 @@ Usage:
 
 ---
 
-### 2. `~/.claude/custom-harness/bin/review/parse-review.py` + 输出契约
+### 2. `~/.claude/custom-harness/bin/code-reviewer/parse-review.py` + 输出契约
 
 **追加到 `~/.claude/custom-harness/agents/code-reviewer.md` 末尾**：
 
@@ -104,10 +106,10 @@ Final lines of response MUST be EXACTLY:
 - Block must be LAST; nothing after </REVIEW_RESULT>.
 ```
 
-**`~/.claude/custom-harness/bin/review/parse-review.py` 接口**：
+**`~/.claude/custom-harness/bin/code-reviewer/parse-review.py` 接口**：
 
 ```
-python ~/.claude/custom-harness/bin/review/parse-review.py [--file <path>]
+python ~/.claude/custom-harness/bin/code-reviewer/parse-review.py [--file <path>]
 ```
 
 1. `re.search(r'<REVIEW_RESULT>\s*(\{.*?\})\s*</REVIEW_RESULT>', txt, re.DOTALL)` 抽块
@@ -118,7 +120,7 @@ python ~/.claude/custom-harness/bin/review/parse-review.py [--file <path>]
 **编排器用法**（替代 LLM 数严重度）：
 ```bash
 # 将 reviewer subagent 输出保存到文件
-python ~/.claude/custom-harness/bin/review/parse-review.py --file review-out.txt
+python ~/.claude/custom-harness/bin/code-reviewer/parse-review.py --file review-out.txt
 # exit 0 → 跳出循环; exit 1 → 继续修复; exit 5 → reviewer 未遵守契约，报错
 ```
 
@@ -160,7 +162,7 @@ python ~/.claude/custom-harness/bin/review/parse-review.py --file review-out.txt
 
 ---
 
-### 4. `~/.claude/custom-harness/bin/vsc-commit.py` gitmoji 校验
+### 4. `~/.claude/custom-harness/bin/vsc-committer/vsc-commit.py` gitmoji 校验
 
 **新增（脚本顶部）**：
 ```python
@@ -198,11 +200,11 @@ grep '✅ T18' /tmp/TASKS.md
 
 # 2. parse-review.py — 有契约
 printf '<REVIEW_RESULT>\n{"verdict":"pass","crit":0,"maj":0,"min":1,"info":0,"findings":[]}\n</REVIEW_RESULT>' \
-  | python ~/.claude/custom-harness/bin/review/parse-review.py --file /dev/stdin
+  | python ~/.claude/custom-harness/bin/code-reviewer/parse-review.py --file /dev/stdin
 # expect exit 0, stdout valid JSON
 
 # 2b. parse-review.py — 无契约
-echo "no block" | python ~/.claude/custom-harness/bin/review/parse-review.py --file /dev/stdin
+echo "no block" | python ~/.claude/custom-harness/bin/code-reviewer/parse-review.py --file /dev/stdin
 # expect exit 5
 
 # 3. dispatch.py envelope
@@ -210,8 +212,8 @@ python ~/.claude/custom-harness/bin/dispatch.py code-reviewer "test" | python -c
 python ~/.claude/custom-harness/bin/dispatch.py --parallel "code-reviewer a" "code-implementer b" | python -c "import sys,json; d=json.load(sys.stdin); assert d['mode']=='parallel' and len(d['payloads'])==2"
 
 # 4. vsc-commit.py validation
-python ~/.claude/custom-harness/bin/vsc-commit.py . -m "bad msg" --dry-run   # expect exit 5
-python ~/.claude/custom-harness/bin/vsc-commit.py . -m "✨ feat(x): add y" --dry-run  # expect ok
+python ~/.claude/custom-harness/bin/vsc-committer/vsc-commit.py . -m "bad msg" --dry-run   # expect exit 5
+python ~/.claude/custom-harness/bin/vsc-committer/vsc-commit.py . -m "✨ feat(x): add y" --dry-run  # expect ok
 
 # 5. 集成回归
 # /dispatch dev-cycle <some-spec.md>  — 确认 TASKS 自动更新、循环由 exit code 控制
@@ -223,7 +225,7 @@ python ~/.claude/custom-harness/bin/vsc-commit.py . -m "✨ feat(x): add y" --dr
 
 1. `dispatch.py` envelope + `SKILL.md` flow（改动最小，最先可验证）
 2. `vsc-commit.py --validate-msg` + `vsc-committer.md`
-3. `bin/review/parse-review.py` + `code-reviewer.md` / `code-implementer.md` 契约
+3. `bin/code-reviewer/parse-review.py` + `code-reviewer.md` / `code-implementer.md` 契约
 4. `bin/dev-cycle/task-status.py` + `dev-cycle.md` Step 4 改写
 5. `dev-cycle.md` / `bug-fixer.md` Step 3/5 接入 `parse-review.py`
 6. 端到端 dev-cycle 回归
