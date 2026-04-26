@@ -31,7 +31,7 @@
 | T11 | `phase1-T11-line-length.md` | 120-column line wrapping | ✅ Done |
 | T12 | `phase1-T12-include-sort.md` | #include Google three-group sorting | ✅ Done |
 | T13 | `phase1-T13-config.md` | YAML config loading + directory lookup | ✅ Done |
-| T14 | `phase1-T14-ignore.md` | `.cclinterignore` support | ⬜ Stub |
+| T14 | `phase1-T14-ignore.md` | `.cclinterignore` support | ✅ Done |
 | T15 | `phase1-T15-modes.md` | `--diff` / `--check` / `-i` modes | ⬜ Stub |
 | T16 | `phase1-T16-parallel.md` | rayon parallel file processing | ⬜ Stub |
 | T17 | `phase1-T17-tests.md` | Unit tests + snapshot test framework | ⬜ Stub |

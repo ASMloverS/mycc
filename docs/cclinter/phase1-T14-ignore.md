@@ -5,7 +5,7 @@
 - Modify: `tools/linter/cclinter/src/cli.rs`
 - Test: `tests/ignore_tests.rs`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `tests/ignore_tests.rs`:
 
@@ -37,12 +37,12 @@ fn test_empty_matcher() {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run: `cargo test --test ignore_tests`
 Expected: FAIL.
 
-- [ ] **Step 3: Implement `src/ignore.rs`**
+- [x] **Step 3: Implement `src/ignore.rs`**
 
 ```rust
 use globset::{Glob, GlobSet, GlobSetBuilder};
@@ -86,7 +86,7 @@ impl IgnoreMatcher {
 }
 ```
 
-- [ ] **Step 4: Update `src/cli.rs` to use ignore**
+- [x] **Step 4: Update `src/cli.rs` to use ignore**
 
 In the `run()` function, after collecting files, add ignore filtering:
 
@@ -101,12 +101,12 @@ let files: Vec<PathBuf> = collected_files
 
 (Exact integration depends on file collection logic from T01.)
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cargo test --test ignore_tests`
 Expected: All PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tools/linter/cclinter/
