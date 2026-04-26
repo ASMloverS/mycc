@@ -41,7 +41,7 @@
 | Task | File | Description | Status |
 |------|------|-------------|--------|
 | T01 | `phase2-T01-diag-framework.md` | clang-tidy diagnostic output + rule trait | ✅ Done |
-| T02 | `phase2-T02-naming.md` | Naming convention checks | ⬜ Stub |
+| T02 | `phase2-T02-naming.md` | Naming convention checks | ✅ Done |
 | T03 | `phase2-T03-include-guard.md` | Include guard + duplicate include detection | ⬜ Stub |
 | T04 | `phase2-T04-complexity.md` | Function/file line count, nesting depth | ⬜ Stub |
 | T05 | `phase2-T05-magic-number.md` | Magic number detection + allowlist | ⬜ Stub |
