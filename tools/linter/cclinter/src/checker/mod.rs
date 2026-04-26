@@ -11,7 +11,11 @@ use crate::common::source::SourceFile;
 
 pub fn check_source(source: &SourceFile) -> Vec<Diagnostic> {
     let mut diags = Vec::new();
-    diags.extend(naming::check_naming(source));
+    diags.extend(naming::check_naming(source, "snake_case", "function"));
+    diags.extend(naming::check_naming(source, "upper_snake_case", "macro"));
+    diags.extend(naming::check_naming(source, "snake_case", "variable"));
+    diags.extend(naming::check_naming(source, "pascal_case", "type"));
+    diags.extend(naming::check_naming(source, "upper_snake_case", "constant"));
     diags.extend(include_guard::check_include_guard(source));
     diags.extend(complexity::check_complexity(source));
     diags.extend(magic_number::check_magic_number(source));
