@@ -41,3 +41,16 @@ End: **Summary** table — counts by severity + pass/fail verdict.
 - Ambiguous spec → INFO, not guesses.
 - No refactors outside review scope.
 - Summary in session language.
+
+## Output Contract (MUST)
+
+Final lines of response MUST be EXACTLY:
+
+<REVIEW_RESULT>
+{"verdict":"pass|fail","crit":N,"maj":N,"min":N,"info":N,
+ "findings":[{"sev":"CRITICAL|MAJOR|MINOR|INFO","loc":"path:line","msg":"..."}]}
+</REVIEW_RESULT>
+
+- verdict = "fail" iff crit > 0 OR maj > 0
+- Strict JSON. No trailing commas. UTF-8.
+- Block must be LAST; nothing after </REVIEW_RESULT>.

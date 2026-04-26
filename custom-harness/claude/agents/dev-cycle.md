@@ -29,17 +29,23 @@ Capture `changed_files` list from result. None reported → abort + report "impl
 
 Bash:
 ```
-DISPATCH code-reviewer "Spec:\n<spec>\n\nImpl files: <changed_files>\n\nReview for correctness, security, performance. Output per-finding severity (CRITICAL/MAJOR/MINOR/INFO) + summary table."
+DISPATCH code-reviewer "Spec:\n<spec>\n\nImpl files: <changed_files>\n\nReview for correctness, security, performance."
 ```
-Parse JSON → Agent spawn.
+Parse JSON → Agent spawn. Write agent result text to `/tmp/review-out.txt`.
 
-Parse result → `findings` list, `verdict` (pass/fail), severity counts.
+Bash:
+```
+python ~/.claude/custom-harness/bin/code-reviewer/parse-review.py --file /tmp/review-out.txt
+```
+- exit 0 → verdict=pass; read JSON from stdout for counts
+- exit 1 → verdict=fail; read JSON from stdout (contains crit/maj counts and findings)
+- exit 5 → reviewer did not output `<REVIEW_RESULT>` block → abort with "reviewer contract violation"
 
 ## Step 3 — Fix Loop (max 2 iter)
 
 `iter = 0`
 
-While findings contain CRITICAL or MAJOR:
+While parse-review.py exited 1 (verdict=fail):
 - `iter >= 2` → break → failure path (skip to Output)
 - Bash:
   ```
@@ -48,25 +54,28 @@ While findings contain CRITICAL or MAJOR:
   Parse JSON → Agent spawn.
 - Bash:
   ```
-  DISPATCH code-reviewer "Spec:\n<spec>\n\nImpl files: <changed_files>\n\nReview fixed code. Output per-finding severity + summary table."
+  DISPATCH code-reviewer "Spec:\n<spec>\n\nImpl files: <changed_files>\n\nReview fixed code."
   ```
-  Parse JSON → Agent spawn. Re-parse findings.
+  Parse JSON → Agent spawn. Write result to `/tmp/review-out.txt`.
+  Bash: `python ~/.claude/custom-harness/bin/code-reviewer/parse-review.py --file /tmp/review-out.txt`
+  exit 0 → loop done. exit 1 → continue. exit 5 → abort "reviewer contract violation".
 - `iter++`
 
 ## Step 4 — Doc Status Update
 
 Only if `spec_path` exists:
-1. Resolve TASKS index:
-   - Check `spec_path` dir for a file named `TASKS.md` (e.g. `docs/TASKS.md`)
-   - Fallback: Glob `tasks/` sibling dir + same dir → `.md` files
-2. Extract task identifier from spec: T-number (e.g. `T18`), task title, or filename stem.
-3. Grep TASKS index for a line matching that identifier.
-4. Determine current status marker on that line:
-   - `⬜` (Unicode U+2B1C) → replace with `✅` (U+2705)  ← preferred format
-   - `[ ]` → replace with `[x]`                          ← fallback checkbox format
-   - `status: pending` → `status: done`                   ← fallback key-value format
-5. Edit: replace only the status marker on that specific line (Read before Edit).
-6. No match → print `no task doc found for <identifier>, skipping status update`
+
+Bash:
+```
+python ~/.claude/custom-harness/bin/dev-cycle/task-status.py \
+  --spec <spec_path> --to done
+```
+
+- exit 0 → print result JSON (path + line updated)
+- exit 2 → print "TASKS index not found, skipping status update"
+- exit 3 → print "task already done, skipping"
+- exit 4 → print stderr message + skip
+- exit 5 → spec missing (should not happen at this point)
 
 ## Output
 

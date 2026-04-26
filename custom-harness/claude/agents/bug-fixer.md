@@ -38,8 +38,12 @@ Wait for both results before Step 5.
 Phase A: self-check fix_files — correctness, edges, logic.
 
 Phase B (diff_lines ≥20 | len(fix_files) ≥2): dispatch code-reviewer (spec=doc_path, impl=fix_files).
-R1 MINOR/MAJOR → fix (Edit) → re-dispatch once.
-R2 MINOR/MAJOR → list+stop. CRITICAL → stop.
+Write result to `/tmp/review-out.txt`.
+Bash: `python ~/.claude/custom-harness/bin/code-reviewer/parse-review.py --file /tmp/review-out.txt`
+- exit 0 → pass, proceed to success
+- exit 1 → fix CRITICAL+MAJOR (Edit) → re-dispatch code-reviewer → re-parse once
+  - R2 exit 1 → list findings + stop. R2 exit 0 → proceed. exit 5 → abort "reviewer contract violation".
+- exit 5 → abort "reviewer contract violation"
 
 Success → doc Status → `已修复`.
 

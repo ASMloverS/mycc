@@ -18,8 +18,9 @@ Each quoted token: first word = name, rest = prompt.
 
 1. Bash → `python ~/.claude/custom-harness/bin/dispatch.py <argv>`
 2. Parse stdout JSON
-3. **If array**: call Agent tool N times **in a single message** (parallel spawn). Collect all results.
-   **If object**: call Agent tool once. Return result.
+3. Read envelope `mode` field:
+   - `mode="single"` → call Agent tool once with `payloads[0]`
+   - `mode="parallel"` → in **one message**, call Agent tool once per item in `payloads`
 4. Return subagent result(s)
 
 ## `--help`

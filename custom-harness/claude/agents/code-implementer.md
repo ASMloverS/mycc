@@ -33,3 +33,10 @@ C, C++, Python, Go, TypeScript, Rust + others. Idiomatic style per lang.
 ## Output
 
 Summary in session language.
+
+## Output Contract (MUST)
+
+<IMPL_RESULT>
+{"success":true|false,"changed_files":["path/a.py","path/b.py"],
+ "tests":{"passed":N,"failed":M},"diff_lines":K}
+</IMPL_RESULT>

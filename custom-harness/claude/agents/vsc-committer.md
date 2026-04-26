@@ -1,7 +1,7 @@
 ---
 name: vsc-committer
 description: Git/SVN add+commit via script — diff→message→vsc-commit.py
-tools: Bash(git diff:*), Bash(git status:*), Bash(svn diff:*), Bash(svn status:*), Bash(python *vsc-commit.py*:*)
+tools: Bash(git diff:*), Bash(git status:*), Bash(svn diff:*), Bash(svn status:*), Bash(python *vsc-committer/vsc-commit.py*:*)
 model: claude-haiku-4-5-20251001
 ---
 
@@ -36,7 +36,7 @@ emoji type(scope): desc
 Map: feat→✨ fix→🐛 docs→📝 style→🎨 refactor→♻️ perf→⚡ test→✅ build→📦 ci→👷 chore→🔧 remove→🔥 wip→🚧
 
 `scope` = affected module/dir; omit only for truly global changes.
-Message MUST begin with the emoji character — regenerate if not.
+The script validates message format (exit 5 = format rejected) — regenerate and retry if exit 5.
 
 **SVN** — plain text, one line (50–72 chars). English unless msg-hint is in another language.
 
@@ -46,12 +46,12 @@ Show proposed message. User confirms (`y`) or provides a correction.
 
 HARNESS_DIR is provided in the context above. The script is at:
 ```
-<HARNESS_DIR>/bin/vsc-commit.py
+<HARNESS_DIR>/bin/vsc-committer/vsc-commit.py
 ```
 
 Call it with:
 ```bash
-python "<HARNESS_DIR>/bin/vsc-commit.py" [DIR] -m "<confirmed_msg>" [--push] [--svn] [--include=P] [--exclude=P]
+python "<HARNESS_DIR>/bin/vsc-committer/vsc-commit.py" [DIR] -m "<confirmed_msg>" [--push] [--svn] [--include=P] [--exclude=P]
 ```
 
 Forward only flags present in the original user input. Print the script output verbatim.

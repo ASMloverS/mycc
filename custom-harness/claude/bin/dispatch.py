@@ -231,7 +231,7 @@ def main() -> None:
             if len(parts) < 2:
                 _die(f"--parallel token must be 'name prompt': got {token!r}", 2)
             payloads.append(build_payload(registry, parts[0], parts[1], model, bg))
-        print(json.dumps(payloads, ensure_ascii=False, indent=2))
+        print(json.dumps({"mode": "parallel", "payloads": payloads}, ensure_ascii=False, indent=2))
         return
 
     if not clean:
@@ -240,7 +240,7 @@ def main() -> None:
 
     name_token = clean[0]
     user_prompt = " ".join(clean[1:])
-    print(json.dumps(build_payload(registry, name_token, user_prompt, model, bg),
+    print(json.dumps({"mode": "single", "payloads": [build_payload(registry, name_token, user_prompt, model, bg)]},
                      ensure_ascii=False, indent=2))
 
 
