@@ -243,3 +243,66 @@ fn test_conflicting_flags_rejected() {
         "should report conflict, got: {stderr:?}"
     );
 }
+
+#[test]
+fn test_jobs_flag_processes_files() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(dir.path().join("a.c"), b"int x;\t\n").unwrap();
+    fs::write(dir.path().join("b.c"), b"int y;\t\n").unwrap();
+
+    let output = Command::new(bin())
+        .args(["--check", "-j2", dir.path().to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(1));
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(stderr.contains("a.c"), "should mention a.c, got: {stderr:?}");
+    assert!(stderr.contains("b.c"), "should mention b.c, got: {stderr:?}");
+}
+
+#[test]
+fn test_jobs_1_is_serial() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(dir.path().join("a.c"), "int x;\n").unwrap();
+
+    let output = Command::new(bin())
+        .args(["--check", "-j1", dir.path().to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert_eq!(output.status.code(), Some(0));
+}
+
+#[test]
+fn test_parallel_default_mode_stdout() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(dir.path().join("a.c"), b"int x;\t\n").unwrap();
+    fs::write(dir.path().join("b.c"), b"int y;\t\n").unwrap();
+
+    let output = Command::new(bin())
+        .args(["-j2", dir.path().to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(output.status.success());
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(!stdout.contains('\t'), "tabs should be removed, got: {stdout:?}");
+}
+
+#[test]
+fn test_jobs_zero_rejected() {
+    let dir = tempfile::tempdir().unwrap();
+    fs::write(dir.path().join("a.c"), "int x;\n").unwrap();
+
+    let output = Command::new(bin())
+        .args(["-j0", dir.path().to_str().unwrap()])
+        .output()
+        .unwrap();
+    assert!(
+        !output.status.success(),
+        "-j0 should be rejected"
+    );
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    assert!(
+        stderr.contains("invalid value") || stderr.contains("at least 1"),
+        "should explain -j0 rejection, got: {stderr:?}"
+    );
+}

@@ -1,8 +1,11 @@
 use clap::Parser;
+use rayon::prelude::*;
 use similar::{ChangeTag, TextDiff};
 use std::path::PathBuf;
 
 use crate::config::{load_config, AnalysisLevel};
+
+type FormatResult = Result<(PathBuf, String, String, Vec<crate::common::diag::Diagnostic>), String>;
 
 #[derive(Parser, Debug)]
 #[command(name = "cclinter", version, about = "C language linter")]
@@ -28,7 +31,7 @@ pub struct Args {
     #[arg(long, value_enum)]
     pub analysis_level: Option<AnalysisLevel>,
 
-    #[arg(short, long)]
+    #[arg(short, long, value_parser = parse_jobs)]
     pub jobs: Option<usize>,
 
     #[arg(long)]
@@ -60,28 +63,62 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         return Ok(());
     }
 
+    if let Some(jobs) = args.jobs {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(jobs)
+            .build_global()
+            .ok();
+    }
+
+    let config_ref = &config.format;
+    let results: Vec<FormatResult> = files
+        .par_iter()
+        .map(|file_path| {
+            let mut source = crate::common::source::SourceFile::load(file_path)
+                .map_err(|e| e.to_string())?;
+            let diags = crate::formatter::format_source(&mut source, config_ref)
+                .map_err(|e| e.to_string())?;
+            Ok((file_path.clone(), source.original, source.content, diags))
+        })
+        .collect();
+
     let mut exit_code = 0u8;
 
-    for file_path in &files {
-        let mut source = crate::common::source::SourceFile::load(file_path)?;
-        let _diagnostics = crate::formatter::format_source(&mut source, &config.format)?;
+    for result in &results {
+        let (file_path, original, formatted, diags) = match result {
+            Ok(r) => r,
+            Err(e) => {
+                eprintln!("error processing file: {e}");
+                exit_code |= 1;
+                continue;
+            }
+        };
+
+        if args.verbose && !diags.is_empty() {
+            for d in diags {
+                eprintln!("{d}");
+            }
+        }
 
         if args.check {
-            if source.is_modified() {
+            if original != formatted {
                 eprintln!("{}: formatting issues found", file_path.display());
                 exit_code |= 1;
             }
         } else if args.diff {
-            print_diff(&source.original, &source.content, file_path);
+            print_diff(original, formatted, file_path);
         } else if args.in_place {
-            if source.is_modified() {
-                std::fs::write(file_path, &source.content)?;
+            if original != formatted {
+                std::fs::write(file_path, formatted)?;
                 if !args.quiet {
                     eprintln!("formatted {}", file_path.display());
                 }
             }
         } else {
-            print!("{}", source.content);
+            print!("{formatted}");
+            if !formatted.ends_with('\n') {
+                println!();
+            }
         }
     }
 
@@ -89,6 +126,14 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         std::process::exit(exit_code as i32);
     }
     Ok(())
+}
+
+fn parse_jobs(s: &str) -> Result<usize, String> {
+    let val: usize = s.parse().map_err(|_| format!("`{s}` is not a positive integer"))?;
+    if val == 0 {
+        return Err("jobs must be at least 1".into());
+    }
+    Ok(val)
 }
 
 fn build_ignore_matcher(args: &Args) -> crate::ignore::IgnoreMatcher {
@@ -137,6 +182,9 @@ fn collect_files(
 }
 
 fn print_diff(old: &str, new: &str, path: &std::path::Path) {
+    if old == new {
+        return;
+    }
     println!("--- {}", path.display());
     println!("+++ {}", path.display());
     let diff = TextDiff::from_lines(old, new);
