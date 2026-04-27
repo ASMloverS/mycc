@@ -43,7 +43,7 @@
 | T01 | `phase2-T01-diag-framework.md` | clang-tidy diagnostic output + rule trait | ✅ Done |
 | T02 | `phase2-T02-naming.md` | Naming convention checks | ✅ Done |
 | T03 | `phase2-T03-include-guard.md` | Include guard + duplicate include detection | ✅ Done |
-| T04 | `phase2-T04-complexity.md` | Function/file line count, nesting depth | ⬜ Stub |
+| T04 | `phase2-T04-complexity.md` | Function/file line count, nesting depth | ✅ Done |
 | T05 | `phase2-T05-magic-number.md` | Magic number detection + allowlist | ⬜ Stub |
 | T06 | `phase2-T06-unused.md` | Unused variable/macro/param detection | ⬜ Stub |
 | T07 | `phase2-T07-prohibited.md` | Prohibited function check + YAML extend/remove | ⬜ Stub |
