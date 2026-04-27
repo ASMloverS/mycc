@@ -5,7 +5,7 @@
 - Modify: `tools/linter/cclinter/src/checker/mod.rs`
 - Test: `tests/checker_tests.rs`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```rust
 use cclinter::checker::unused::check_unused;
@@ -27,12 +27,12 @@ fn test_unused_macro() {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run: `cargo test --test checker_tests test_unused_variable test_unused_macro`
 Expected: FAIL.
 
-- [ ] **Step 3: Create `src/checker/unused.rs`**
+- [x] **Step 3: Create `src/checker/unused.rs`**
 
 ```rust
 use crate::common::diag::{Diagnostic, Severity};
@@ -108,14 +108,14 @@ fn check_unused_macros(source: &SourceFile) -> Vec<Diagnostic> {
 }
 ```
 
-- [ ] **Step 4: Register module, run tests**
+- [x] **Step 4: Register module, run tests**
 
 Add `pub mod unused;` to `src/checker/mod.rs`.
 
 Run: `cargo test --test checker_tests`
 Expected: All PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/linter/cclinter/

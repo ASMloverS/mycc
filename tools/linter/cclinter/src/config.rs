@@ -174,6 +174,18 @@ impl Default for MagicNumberConfig {
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
+pub struct UnusedConfig {
+    pub enabled: bool,
+}
+
+impl Default for UnusedConfig {
+    fn default() -> Self {
+        Self { enabled: true }
+    }
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[serde(default)]
 pub struct IncludeGuardConfig {
     pub style: IncludeGuardStyle,
 }
@@ -204,26 +216,15 @@ impl Default for ProhibitedFunctionsConfig {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct CheckConfig {
     pub naming: NamingConfig,
     pub complexity: ComplexityConfig,
     pub magic_number: MagicNumberConfig,
+    pub unused: UnusedConfig,
     pub include_guard: IncludeGuardConfig,
     pub prohibited_functions: ProhibitedFunctionsConfig,
-}
-
-impl Default for CheckConfig {
-    fn default() -> Self {
-        Self {
-            naming: NamingConfig::default(),
-            complexity: ComplexityConfig::default(),
-            magic_number: MagicNumberConfig::default(),
-            include_guard: IncludeGuardConfig::default(),
-            prohibited_functions: ProhibitedFunctionsConfig::default(),
-        }
-    }
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
@@ -240,22 +241,12 @@ impl Default for AnalysisConfig {
     }
 }
 
-#[derive(Clone, Debug, Serialize, Deserialize, PartialEq)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq)]
 #[serde(default)]
 pub struct Config {
     pub format: FormatConfig,
     pub check: CheckConfig,
     pub analysis: AnalysisConfig,
-}
-
-impl Default for Config {
-    fn default() -> Self {
-        Self {
-            format: FormatConfig::default(),
-            check: CheckConfig::default(),
-            analysis: AnalysisConfig::default(),
-        }
-    }
 }
 
 const CONFIG_FILENAME: &str = ".cclinter.yaml";
