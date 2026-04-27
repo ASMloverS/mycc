@@ -13,3 +13,5 @@ skills:
   doc-refine: { path: skills/doc-refine/SKILL.md, desc: "Ultra-compress docs (EN caveman / CN 文言文)" }
   doc-sync:   { path: skills/doc-sync/SKILL.md,   desc: "Align Markdown docs with current code" }
   doc-write:  { path: skills/doc-write/SKILL.md,  desc: "Write docs from context (CN 文言文 / EN caveman)" }
+
+commands: {}

@@ -7,10 +7,6 @@ import re
 import sys
 from pathlib import Path
 
-# Ensure UTF-8 output on Windows
-sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
-sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
-
 HARNESS_DIR = Path(__file__).resolve().parents[1]
 REGISTRY_PATH = HARNESS_DIR / "registry.yaml"
 
@@ -32,8 +28,9 @@ def _parse_registry_yaml(text: str) -> dict:
         stripped = line.strip()
         if not stripped or stripped.startswith("#"):
             continue
-        if re.match(r"^[a-z_]+:$", stripped):
-            current_section = stripped[:-1]
+        m_hdr = re.match(r"^([a-z_]+):\s*(?:\{\s*\})?$", stripped)
+        if m_hdr:
+            current_section = m_hdr.group(1)
             result[current_section] = {}
             continue
         m = re.match(
@@ -126,6 +123,24 @@ def assemble_prompt(type_: str, name: str, body: str, fm: dict, user_prompt: str
     )
 
 
+def assemble_thin_prompt(type_: str, name: str, fm: dict, user_prompt: str,
+                         md_path: Path, harness_dir: Path | None = None) -> str:
+    """Thin-pointer prompt: subagent reads the definition file itself."""
+    tools = fm.get("tools", "")
+    tool_hint = f"TOOL_HINT: {tools}" if tools else "TOOL_HINT:"
+    harness_line = f"HARNESS_DIR: {harness_dir}" if harness_dir else ""
+    return (
+        "You are a one-shot subagent. Read the file at DEFINITION_FILE as your\n"
+        "literal instructions, then process the User Input.\n\n"
+        f"DEFINITION_FILE: {md_path}\n"
+        f"{harness_line}\n"
+        f"TYPE: {type_}/{name}\n"
+        f"{tool_hint}\n"
+        "\n---\n## User Input\n"
+        f"{user_prompt}"
+    )
+
+
 # ---------------------------------------------------------------------------
 # --help output
 # ---------------------------------------------------------------------------
@@ -166,18 +181,33 @@ def _die(msg: str, code: int = 1) -> None:
 # ---------------------------------------------------------------------------
 
 def build_payload(registry: dict, name_token: str, user_prompt: str,
-                  model: str | None = None, bg: bool = False) -> dict:
+                  model: str | None = None, bg: bool = False,
+                  inline: bool = False, _md_cache: dict | None = None) -> dict:
     type_, name, entry = resolve_name(registry, name_token)
     md_path = HARNESS_DIR / entry["path"]
     if not md_path.exists():
         _die(f"MD not found: {md_path}", 3)
-    fm, body = parse_md(md_path)
+
+    path_key = entry["path"]
+    if _md_cache is not None and path_key in _md_cache:
+        fm, body = _md_cache[path_key]
+    else:
+        fm, body = parse_md(md_path)
+        if _md_cache is not None:
+            _md_cache[path_key] = (fm, body)
+
     if not body.strip():
         _die(f"Empty MD body: {md_path}", 3)
+
+    if inline:
+        prompt = assemble_prompt(type_, name, body, fm, user_prompt, harness_dir=HARNESS_DIR)
+    else:
+        prompt = assemble_thin_prompt(type_, name, fm, user_prompt, md_path, harness_dir=HARNESS_DIR)
+
     payload: dict = {
         "subagent_type": "general-purpose",
         "description": entry["desc"][:50],
-        "prompt": assemble_prompt(type_, name, body, fm, user_prompt, harness_dir=HARNESS_DIR),
+        "prompt": prompt,
     }
     effective_model = model or fm.get("model")
     if effective_model:
@@ -202,6 +232,7 @@ def main() -> None:
     model: str | None = None
     bg = False
     parallel = False
+    inline = False
     clean: list[str] = []
     i = 0
     while i < len(args):
@@ -213,6 +244,9 @@ def main() -> None:
             i += 1
         elif args[i] == "--parallel":
             parallel = True
+            i += 1
+        elif args[i] == "--inline":
+            inline = True
             i += 1
         else:
             clean.append(args[i])
@@ -226,12 +260,13 @@ def main() -> None:
             print_help(registry)
             sys.exit(0)
         payloads = []
+        md_cache: dict = {}
         for token in clean:
             parts = token.split(None, 1)
             if len(parts) < 2:
                 _die(f"--parallel token must be 'name prompt': got {token!r}", 2)
-            payloads.append(build_payload(registry, parts[0], parts[1], model, bg))
-        print(json.dumps({"mode": "parallel", "payloads": payloads}, ensure_ascii=False, indent=2))
+            payloads.append(build_payload(registry, parts[0], parts[1], model, bg, inline, md_cache))
+        print(json.dumps({"mode": "parallel", "payloads": payloads}, ensure_ascii=False, separators=(",", ":")))
         return
 
     if not clean:
@@ -240,9 +275,14 @@ def main() -> None:
 
     name_token = clean[0]
     user_prompt = " ".join(clean[1:])
-    print(json.dumps({"mode": "single", "payloads": [build_payload(registry, name_token, user_prompt, model, bg)]},
-                     ensure_ascii=False, indent=2))
+    print(json.dumps(
+        {"mode": "single", "payloads": [build_payload(registry, name_token, user_prompt, model, bg, inline)]},
+        ensure_ascii=False, separators=(",", ":"),
+    ))
 
 
 if __name__ == "__main__":
+    # Ensure UTF-8 output on Windows when running as CLI
+    sys.stdout = io.TextIOWrapper(sys.stdout.buffer, encoding="utf-8", errors="replace")
+    sys.stderr = io.TextIOWrapper(sys.stderr.buffer, encoding="utf-8", errors="replace")
     main()
