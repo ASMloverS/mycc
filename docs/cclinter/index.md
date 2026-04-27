@@ -44,7 +44,7 @@
 | T02 | `phase2-T02-naming.md` | Naming convention checks | ✅ Done |
 | T03 | `phase2-T03-include-guard.md` | Include guard + duplicate include detection | ✅ Done |
 | T04 | `phase2-T04-complexity.md` | Function/file line count, nesting depth | ✅ Done |
-| T05 | `phase2-T05-magic-number.md` | Magic number detection + allowlist | ⬜ Stub |
+| T05 | `phase2-T05-magic-number.md` | Magic number detection + allowlist | ✅ Done |
 | T06 | `phase2-T06-unused.md` | Unused variable/macro/param detection | ⬜ Stub |
 | T07 | `phase2-T07-prohibited.md` | Prohibited function check + YAML extend/remove | ⬜ Stub |
 | T08 | `phase2-T08-forward-decl.md` | Forward declaration check | ⬜ Stub |
