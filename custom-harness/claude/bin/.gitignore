@@ -1,0 +1,6 @@
+# Built artifacts / symlinks created by dispatch-rs/build-and-deploy.{sh,bat}
+dispatch
+dispatch.exe
+# Legacy Python implementation, replaced by Rust binary
+dispatch.py
+test_dispatch.py
