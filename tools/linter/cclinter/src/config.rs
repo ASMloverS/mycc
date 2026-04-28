@@ -65,6 +65,16 @@ pub enum NamingStyle {
     PascalCase,
 }
 
+impl NamingStyle {
+    pub fn as_str(&self) -> &'static str {
+        match self {
+            NamingStyle::SnakeCase => "snake_case",
+            NamingStyle::UpperSnakeCase => "upper_snake_case",
+            NamingStyle::PascalCase => "pascal_case",
+        }
+    }
+}
+
 #[derive(Clone, Debug, Default, PartialEq, Eq, clap::ValueEnum, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum IncludeGuardStyle {

@@ -17,7 +17,7 @@ fn fixtures_dir() -> std::path::PathBuf {
 fn test_default_mode_prints_formatted() {
     let dirty = fixtures_dir().join("input/dirty.c");
     let output = Command::new(bin())
-        .arg(&dirty)
+        .args(["--format-only", dirty.to_str().unwrap()])
         .output()
         .unwrap();
     assert!(output.status.success());
@@ -33,7 +33,7 @@ fn test_default_mode_prints_formatted() {
 fn test_check_mode_exits_1_on_issues() {
     let dirty = fixtures_dir().join("input/dirty.c");
     let output = Command::new(bin())
-        .args(["--check", dirty.to_str().unwrap()])
+        .args(["--check", "--format-only", dirty.to_str().unwrap()])
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(1));
@@ -48,7 +48,7 @@ fn test_check_mode_exits_1_on_issues() {
 fn test_check_mode_exits_0_on_clean() {
     let clean = fixtures_dir().join("input/clean.c");
     let output = Command::new(bin())
-        .args(["--check", clean.to_str().unwrap()])
+        .args(["--check", "--format-only", clean.to_str().unwrap()])
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(0));
@@ -58,7 +58,7 @@ fn test_check_mode_exits_0_on_clean() {
 fn test_diff_mode_shows_changes() {
     let dirty = fixtures_dir().join("input/dirty.c");
     let output = Command::new(bin())
-        .args(["--diff", dirty.to_str().unwrap()])
+        .args(["--diff", "--format-only", dirty.to_str().unwrap()])
         .output()
         .unwrap();
     assert!(output.status.success());
@@ -75,7 +75,7 @@ fn test_diff_mode_shows_changes() {
 fn test_diff_mode_no_changes_on_clean() {
     let clean = fixtures_dir().join("input/clean.c");
     let output = Command::new(bin())
-        .args(["--diff", clean.to_str().unwrap()])
+        .args(["--diff", "--format-only", clean.to_str().unwrap()])
         .output()
         .unwrap();
     assert!(output.status.success());
@@ -98,7 +98,7 @@ fn test_in_place_modifies_file() {
     fs::write(&file_path, b"int x;\t\n").unwrap();
 
     let output = Command::new(bin())
-        .args(["-i", file_path.to_str().unwrap()])
+        .args(["-i", "--format-only", file_path.to_str().unwrap()])
         .output()
         .unwrap();
     assert!(output.status.success());
@@ -115,7 +115,7 @@ fn test_in_place_no_change_on_clean() {
     fs::write(&file_path, clean).unwrap();
 
     let output = Command::new(bin())
-        .args(["-i", file_path.to_str().unwrap()])
+        .args(["-i", "--format-only", file_path.to_str().unwrap()])
         .output()
         .unwrap();
     assert!(output.status.success());
@@ -129,7 +129,7 @@ fn test_quiet_mode_suppresses_output() {
     fs::write(&file_path, b"int x;\t\n").unwrap();
 
     let output = Command::new(bin())
-        .args(["-i", "--quiet", file_path.to_str().unwrap()])
+        .args(["-i", "--quiet", "--format-only", file_path.to_str().unwrap()])
         .output()
         .unwrap();
     assert!(output.status.success());
@@ -148,6 +148,7 @@ fn test_exclude_ignores_file() {
     let output = Command::new(bin())
         .args([
             "--check",
+            "--format-only",
             "--exclude",
             "a.c",
             dir.path().to_str().unwrap(),
@@ -170,7 +171,7 @@ fn test_directory_argument_walks_files() {
     fs::write(dir.path().join("ignore.txt"), "not a c file\n").unwrap();
 
     let output = Command::new(bin())
-        .args(["--check", dir.path().to_str().unwrap()])
+        .args(["--check", "--format-only", dir.path().to_str().unwrap()])
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(0));
@@ -251,7 +252,7 @@ fn test_jobs_flag_processes_files() {
     fs::write(dir.path().join("b.c"), b"int y;\t\n").unwrap();
 
     let output = Command::new(bin())
-        .args(["--check", "-j2", dir.path().to_str().unwrap()])
+        .args(["--check", "--format-only", "-j2", dir.path().to_str().unwrap()])
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(1));
@@ -266,7 +267,7 @@ fn test_jobs_1_is_serial() {
     fs::write(dir.path().join("a.c"), "int x;\n").unwrap();
 
     let output = Command::new(bin())
-        .args(["--check", "-j1", dir.path().to_str().unwrap()])
+        .args(["--check", "--format-only", "-j1", dir.path().to_str().unwrap()])
         .output()
         .unwrap();
     assert_eq!(output.status.code(), Some(0));
@@ -279,7 +280,7 @@ fn test_parallel_default_mode_stdout() {
     fs::write(dir.path().join("b.c"), b"int y;\t\n").unwrap();
 
     let output = Command::new(bin())
-        .args(["-j2", dir.path().to_str().unwrap()])
+        .args(["--format-only", "-j2", dir.path().to_str().unwrap()])
         .output()
         .unwrap();
     assert!(output.status.success());

@@ -1,7 +1,9 @@
 use clap::Parser;
 use rayon::prelude::*;
 use similar::{ChangeTag, TextDiff};
+use std::collections::HashSet;
 use std::path::PathBuf;
+use std::sync::atomic::{AtomicU8, Ordering};
 
 use crate::config::{load_config, AnalysisLevel};
 
@@ -89,7 +91,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             Ok(r) => r,
             Err(e) => {
                 eprintln!("error processing file: {e}");
-                exit_code |= 1;
+                exit_code |= 8;
                 continue;
             }
         };
@@ -119,6 +121,40 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             if !formatted.ends_with('\n') {
                 println!();
             }
+        }
+    }
+
+    if !args.format_only {
+        let check_config = &config.check;
+        let runtime_err = AtomicU8::new(0);
+        let all_diags: Vec<crate::common::diag::Diagnostic> = files
+            .par_iter()
+            .flat_map(|file_path| {
+                let source = match crate::common::source::SourceFile::load(file_path) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("error loading file for checking: {e}");
+                        runtime_err.store(8, Ordering::Relaxed);
+                        return Vec::new();
+                    }
+                };
+                crate::checker::check_source(&source, check_config)
+            })
+            .collect();
+        exit_code |= runtime_err.load(Ordering::Relaxed);
+
+        let mut seen: HashSet<(String, usize, String)> = HashSet::new();
+        for diag in &all_diags {
+            let key = (diag.file.clone(), diag.line, diag.rule_id.clone());
+            if seen.insert(key) {
+                if args.verbose || !args.quiet {
+                    eprintln!("{diag}");
+                }
+            }
+        }
+
+        if !seen.is_empty() {
+            exit_code |= 2;
         }
     }
 

@@ -12,11 +12,31 @@ use crate::config::CheckConfig;
 
 pub fn check_source(source: &SourceFile, config: &CheckConfig) -> Vec<Diagnostic> {
     let mut diags = Vec::new();
-    diags.extend(naming::check_naming(source, "snake_case", "function"));
-    diags.extend(naming::check_naming(source, "upper_snake_case", "macro"));
-    diags.extend(naming::check_naming(source, "snake_case", "variable"));
-    diags.extend(naming::check_naming(source, "pascal_case", "type"));
-    diags.extend(naming::check_naming(source, "upper_snake_case", "constant"));
+    diags.extend(naming::check_naming(
+        source,
+        config.naming.function.as_str(),
+        "function",
+    ));
+    diags.extend(naming::check_naming(
+        source,
+        config.naming.r#macro.as_str(),
+        "macro",
+    ));
+    diags.extend(naming::check_naming(
+        source,
+        config.naming.variable.as_str(),
+        "variable",
+    ));
+    diags.extend(naming::check_naming(
+        source,
+        config.naming.r#type.as_str(),
+        "type",
+    ));
+    diags.extend(naming::check_naming(
+        source,
+        config.naming.constant.as_str(),
+        "constant",
+    ));
     diags.extend(include_guard::check_include_guard(source, &config.include_guard));
     diags.extend(complexity::check_complexity(source, &config.complexity));
     diags.extend(magic_number::check_magic_number(source, &config.magic_number));
