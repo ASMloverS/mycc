@@ -21,7 +21,12 @@ pub fn check_source(source: &SourceFile, config: &CheckConfig) -> Vec<Diagnostic
     diags.extend(complexity::check_complexity(source, &config.complexity));
     diags.extend(magic_number::check_magic_number(source, &config.magic_number));
     diags.extend(unused::check_unused(source, &config.unused));
-    diags.extend(prohibited::check_prohibited(source));
+    diags.extend(prohibited::check_prohibited(
+        source,
+        config.prohibited_functions.use_default,
+        &config.prohibited_functions.extra,
+        &config.prohibited_functions.remove,
+    ));
     diags.extend(forward_decl::check_forward_decl(source));
     diags
 }
