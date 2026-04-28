@@ -76,7 +76,7 @@ def should_skip(path, inc, exc):
 
 def git_changes(cwd):
     result = []
-    for line in query(["git","status","--porcelain"], cwd).splitlines():
+    for line in query(["git","status","--porcelain","--","."], cwd).splitlines():
         if len(line) < 3: continue
         path = line[3:].strip()
         if " -> " in path: path = path.split(" -> ")[1]
@@ -86,9 +86,18 @@ def git_changes(cwd):
 def svn_changes(cwd):
     return [(l[0], l[8:].strip()) for l in query(["svn","status"], cwd).splitlines() if l.strip()]
 
-def apply_filter(changes, inc, exc):
+def _outside_cwd(path, cwd):
+    try:
+        (cwd / path).resolve().relative_to(cwd.resolve())
+        return False
+    except ValueError:
+        return True
+
+def apply_filter(changes, inc, exc, cwd=None):
     keep, dropped = [], []
-    for item in changes: (dropped if should_skip(item[1], inc, exc) else keep).append(item)
+    for item in changes:
+        outside = cwd is not None and _outside_cwd(item[1], cwd)
+        (dropped if outside or should_skip(item[1], inc, exc) else keep).append(item)
     return keep, dropped
 
 def do_git(opts, cwd, keep):
@@ -96,7 +105,7 @@ def do_git(opts, cwd, keep):
     dry = opts["dry"]
     files = [p for _, p in keep]
     run(["git", "add"] + files, cwd, dry)
-    run(["git", "commit", "-m", opts["msg"]], cwd, dry)
+    run(["git", "commit", "-m", opts["msg"], "--"] + files, cwd, dry)
     if opts["push"]: run(["git", "push"], cwd, dry)
     if not dry: print(query(["git", "status"], cwd))
 
@@ -123,7 +132,7 @@ def main():
     vcs = detect_vcs(cwd, opts["svn"])
     changes = git_changes(cwd) if vcs == "git" else svn_changes(cwd)
     if not changes: die("nothing to commit", 1)
-    keep, dropped = apply_filter(changes, opts["inc"], opts["exc"])
+    keep, dropped = apply_filter(changes, opts["inc"], opts["exc"], cwd)
     if dropped: print(f"Filtered ({len(dropped)}): {[p for _, p in dropped]}")
     if not keep: die("all changes filtered — nothing to commit", 1)
     print(f"Committing ({len(keep)}): {[p for _, p in keep]}")

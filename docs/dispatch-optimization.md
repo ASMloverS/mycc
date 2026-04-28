@@ -184,7 +184,7 @@ CLI 表面 100% 与 `dispatch.py` 一致：相同 argv、相同 JSON envelope、
 
 ### Phase 3 — SKILL.md 同步
 
-- [ ] **3.1** `SKILL.md` Invoke 段添加 `--inline` 说明
-- [ ] **3.2** `SKILL.md` Flow 第 1 步路径改为 `bin/dispatch`
-- [ ] **3.3** `SKILL.md` Flow 添加 subagent 首步 `Read` 说明
-- [ ] **3.4** 通读 SKILL.md 确认与新行为一致，无过时描述
+- [x] **3.1** `SKILL.md` Invoke 段添加 `--inline` 说明
+- [x] **3.2** `SKILL.md` Flow 第 1 步路径改为 `bin/dispatch`
+- [x] **3.3** `SKILL.md` Flow 添加 subagent 首步 `Read` 说明
+- [x] **3.4** 通读 SKILL.md 确认与新行为一致，无过时描述（附加修复：`--help` 段移除 `dispatch.py` 引用）
