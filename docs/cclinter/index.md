@@ -47,7 +47,7 @@
 | T05 | `phase2-T05-magic-number.md` | Magic number detection + allowlist | ✅ Done |
 | T06 | `phase2-T06-unused.md` | Unused variable/macro/param detection | ✅ Done |
 | T07 | `phase2-T07-prohibited.md` | Prohibited function check + YAML extend/remove | ✅ Done |
-| T08 | `phase2-T08-forward-decl.md` | Forward declaration check | ⬜ Stub |
+| T08 | `phase2-T08-forward-decl.md` | Forward declaration check | ✅ Done |
 | T09 | `phase2-T09-integration.md` | Exit code 2, checker integration, tests | ⬜ Stub |
 
 ## Phase 3 — Static Analysis
