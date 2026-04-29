@@ -1,4 +1,4 @@
-use cclinter::analyzer::{analyze_source, basic};
+use cclinter::analyzer::{analyze_source, basic, strict};
 use cclinter::common::source::SourceFile;
 use cclinter::config::{AnalysisConfig, AnalysisLevel};
 use std::path::PathBuf;
@@ -227,4 +227,181 @@ fn test_analysis_level_deep() {
         .output()
         .unwrap();
     assert!(output.status.success(), "stderr: {}", String::from_utf8_lossy(&output.stderr));
+}
+
+#[test]
+fn test_malloc_no_free() {
+    let input = "void f() {\n  void* p = malloc(100);\n  return;\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-resource-leak"));
+}
+
+#[test]
+fn test_calloc_no_free() {
+    let input = "void f() {\n  int* arr = calloc(10, sizeof(int));\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-resource-leak"));
+}
+
+#[test]
+fn test_realloc_no_free() {
+    let input = "void f() {\n  buf = realloc(buf, 200);\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-resource-leak"));
+}
+
+#[test]
+fn test_malloc_with_free_ok() {
+    let input = "void f() {\n  void* p = malloc(100);\n  free(p);\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-resource-leak"));
+}
+
+#[test]
+fn test_alloc_free_equal_count_ok() {
+    let input = "void f() {\n  void* a = malloc(10);\n  void* b = malloc(20);\n  free(a);\n  free(b);\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-resource-leak"));
+}
+
+#[test]
+fn test_if_zero_dead_branch() {
+    let input = "if (0) {\n  dead_code();\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-dead-branch"));
+}
+
+#[test]
+fn test_if_false_dead_branch() {
+    let input = "if (false) {\n  dead_code();\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-dead-branch"));
+}
+
+#[test]
+fn test_if_true_no_dead_branch() {
+    let input = "if (1) {\n  live_code();\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-dead-branch"));
+}
+
+#[test]
+fn test_if_var_no_dead_branch() {
+    let input = "if (x) {\n  code();\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-dead-branch"));
+}
+
+#[test]
+fn test_dead_branch_comment_ignored() {
+    let input = "// if (0) { dead(); }\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-dead-branch"));
+}
+
+#[test]
+fn test_suspicious_cast() {
+    let input = "void* ptr = NULL;\nint x = (int)ptr;\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-suspicious-cast"));
+}
+
+#[test]
+fn test_suspicious_cast_with_pointer_decl() {
+    let input = "void* p = NULL;\nint v = (int)p;\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-suspicious-cast"));
+}
+
+#[test]
+fn test_normal_cast_ok() {
+    let input = "int x = (int)val;\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-suspicious-cast"));
+}
+
+#[test]
+fn test_suspicious_cast_comment_ignored() {
+    let input = "// int x = (int)ptr;\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-suspicious-cast"));
+}
+
+#[test]
+fn test_empty_source_strict() {
+    let input = "";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(diags.is_empty());
+}
+
+#[test]
+fn test_resource_leak_comment_ignored() {
+    let input = "// void* p = malloc(100);\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-resource-leak"));
+}
+
+#[test]
+fn test_cast_non_ptr_substring_ok() {
+    let input = "int fprintf_count = 0;\nint x = (int)fprintf_count;\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-suspicious-cast"));
+}
+
+#[test]
+fn test_else_if_zero_dead_branch() {
+    let input = "if (x) {\n  a();\n} else if (0) {\n  dead();\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-dead-branch"));
+}
+
+#[test]
+fn test_hash_if_zero_dead_branch() {
+    let input = "#if 0\n  dead();\n#endif\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-dead-branch"));
+}
+
+#[test]
+fn test_malloc_returned_ok() {
+    let input = "void* f() {\n  void* p = malloc(100);\n  return p;\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-resource-leak"));
+}
+
+#[test]
+fn test_resource_leak_per_function() {
+    let input = "void f() {\n  void* p = malloc(100);\n}\nvoid g() {\n  free(p);\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    let leak_count = diags.iter().filter(|d| d.rule_id == "bugprone-resource-leak").count();
+    assert_eq!(leak_count, 1);
+}
+
+#[test]
+fn test_strip_comment_string_literal() {
+    let input = "void f() {\n  void* p = malloc(strlen(\"//comment\"));\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = strict::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-resource-leak"));
 }

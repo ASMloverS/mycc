@@ -4,7 +4,7 @@
 - Modify: `tools/linter/cclinter/src/analyzer/strict.rs`
 - Test: `tests/analyzer_tests.rs`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Add to `tests/analyzer_tests.rs`:
 
@@ -36,12 +36,12 @@ fn test_suspicious_cast() {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run: `cargo test --test analyzer_tests test_malloc_no_free test_if_false test_suspicious_cast`
 Expected: FAIL.
 
-- [ ] **Step 3: Implement `src/analyzer/strict.rs`**
+- [x] **Step 3: Implement `src/analyzer/strict.rs`**
 
 ```rust
 use crate::common::diag::{Diagnostic, Severity};
@@ -129,12 +129,12 @@ fn check_suspicious_casts(source: &SourceFile) -> Vec<Diagnostic> {
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cargo test --test analyzer_tests`
 Expected: All PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/linter/cclinter/

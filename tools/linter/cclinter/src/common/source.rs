@@ -51,6 +51,21 @@ impl SourceFile {
     }
 }
 
+pub fn strip_line_comment(line: &str) -> &str {
+    let mut in_string = false;
+    let mut chars = line.char_indices().peekable();
+    while let Some((i, c)) = chars.next() {
+        if c == '"' && (i == 0 || line.as_bytes()[i - 1] != b'\\') {
+            in_string = !in_string;
+        } else if c == '/' && !in_string {
+            if chars.peek().map(|(_, c)| *c) == Some('/') {
+                return &line[..i];
+            }
+        }
+    }
+    line
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

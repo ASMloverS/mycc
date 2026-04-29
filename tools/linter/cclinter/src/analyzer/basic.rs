@@ -1,5 +1,5 @@
 use crate::common::diag::{Diagnostic, Severity};
-use crate::common::source::SourceFile;
+use crate::common::source::{strip_line_comment, SourceFile};
 use crate::config::AnalysisConfig;
 use regex::Regex;
 use std::collections::HashSet;
@@ -23,13 +23,6 @@ static UNINIT_DECL_RE: LazyLock<Regex> = LazyLock::new(|| {
 
 static ASSIGN_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\b(\w+)\s*=[^=]").unwrap());
-
-fn strip_line_comment(line: &str) -> &str {
-    match line.find("//") {
-        Some(pos) => &line[..pos],
-        None => line,
-    }
-}
 
 fn line_has_return(line: &str) -> bool {
     line.contains("return ") || line.contains("return;")
