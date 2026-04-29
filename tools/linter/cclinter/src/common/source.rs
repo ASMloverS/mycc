@@ -51,6 +51,31 @@ impl SourceFile {
     }
 }
 
+pub fn mask_string_literals(line: &str) -> String {
+    let mut result = String::with_capacity(line.len());
+    let mut in_string = false;
+    let mut chars = line.chars().peekable();
+    while let Some(c) = chars.next() {
+        if c == '\\' && in_string {
+            result.push('_');
+            if chars.peek().is_some() {
+                result.push('_');
+                chars.next();
+            }
+            continue;
+        }
+        if c == '"' {
+            in_string = !in_string;
+            result.push('"');
+        } else if in_string {
+            result.push('_');
+        } else {
+            result.push(c);
+        }
+    }
+    result
+}
+
 pub fn strip_line_comment(line: &str) -> &str {
     let mut in_string = false;
     let mut chars = line.char_indices().peekable();

@@ -1,4 +1,4 @@
-use cclinter::analyzer::{analyze_source, basic, strict};
+use cclinter::analyzer::{analyze_source, basic, deep, strict};
 use cclinter::common::source::SourceFile;
 use cclinter::config::{AnalysisConfig, AnalysisLevel};
 use std::path::PathBuf;
@@ -404,4 +404,156 @@ fn test_strip_comment_string_literal() {
     let src = SourceFile::from_string(input, PathBuf::from("test.c"));
     let diags = strict::check(&src, &AnalysisConfig::default());
     assert!(diags.iter().any(|d| d.rule_id == "bugprone-resource-leak"));
+}
+
+#[test]
+fn test_deep_gets_buffer_overflow() {
+    let input = "char buf[10];\ngets(buf);\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = deep::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-buffer-overflow-risk"));
+}
+
+#[test]
+fn test_deep_null_deref_pattern() {
+    let input = "int* p = NULL;\n*p = 42;\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = deep::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-null-deref-risk"));
+}
+
+#[test]
+fn test_deep_array_no_bounds_check() {
+    let input = "int arr[10];\nint idx = get_index();\narr[idx] = 1;\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = deep::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-buffer-overflow-risk"));
+}
+
+#[test]
+fn test_deep_scanf_unbounded() {
+    let input = "char buf[32];\nscanf(\"%s\", buf);\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = deep::check(&src, &AnalysisConfig::default());
+    assert!(diags
+        .iter()
+        .any(|d| d.rule_id == "bugprone-buffer-overflow-risk" && d.message.contains("scanf")));
+}
+
+#[test]
+fn test_deep_null_deref_read() {
+    let input = "int* p = NULL;\nint x = *p;\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = deep::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-null-deref-risk"));
+}
+
+#[test]
+fn test_deep_gets_comment_ignored() {
+    let input = "// gets(buf);\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = deep::check(&src, &AnalysisConfig::default());
+    assert!(!diags
+        .iter()
+        .any(|d| d.rule_id == "bugprone-buffer-overflow-risk" && d.message.contains("gets()")));
+}
+
+#[test]
+fn test_deep_scanf_bounded_ok() {
+    let input = "scanf(\"%31s\", buf);\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = deep::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.message.contains("scanf")));
+}
+
+#[test]
+fn test_deep_fgets_ok() {
+    let input = "fgets(buf, 10, stdin);\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = deep::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-buffer-overflow-risk"));
+}
+
+#[test]
+fn test_deep_array_literal_index_ok() {
+    let input = "int arr[10];\narr[0] = 1;\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = deep::check(&src, &AnalysisConfig::default());
+    assert!(!diags
+        .iter()
+        .any(|d| d.rule_id == "bugprone-buffer-overflow-risk" && d.message.contains("bounds check")));
+}
+
+#[test]
+fn test_deep_array_with_bounds_check_ok() {
+    let input = "int arr[10];\nif (idx < 10) arr[idx] = 1;\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = deep::check(&src, &AnalysisConfig::default());
+    assert!(!diags
+        .iter()
+        .any(|d| d.rule_id == "bugprone-buffer-overflow-risk" && d.message.contains("bounds check")));
+}
+
+#[test]
+fn test_deep_null_deref_with_check_ok() {
+    let input = "int* p = NULL;\nif (p != NULL) {\n  *p = 42;\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = deep::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-null-deref-risk"));
+}
+
+#[test]
+fn test_deep_null_deref_comment_ignored() {
+    let input = "// int* p = NULL;\n// *p = 42;\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = deep::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-null-deref-risk"));
+}
+
+#[test]
+fn test_deep_empty_source() {
+    let input = "";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = deep::check(&src, &AnalysisConfig::default());
+    assert!(diags.is_empty());
+}
+
+#[test]
+fn test_deep_non_null_deref_ok() {
+    let input = "int* p = get_ptr();\n*p = 42;\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = deep::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-null-deref-risk"));
+}
+
+#[test]
+fn test_deep_null_guard_if_ptr() {
+    let input = "void f() {\n  int* p = NULL;\n  if (p) {\n    *p = 42;\n  }\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = deep::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-null-deref-risk"));
+}
+
+#[test]
+fn test_deep_string_literal_no_false_positive() {
+    let input = "int* p = NULL;\nprintf(\"*p is bad\\n\");\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = deep::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-null-deref-risk"));
+}
+
+#[test]
+fn test_deep_multiplication_no_false_positive() {
+    let input = "int* b = NULL;\nint x = a * b;\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = deep::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-null-deref-risk"));
+}
+
+#[test]
+fn test_deep_cross_function_no_false_positive() {
+    let input = "void f1() {\n  int* p = NULL;\n}\nvoid f2() {\n  *p = 42;\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = deep::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-null-deref-risk"));
 }

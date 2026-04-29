@@ -4,7 +4,7 @@
 - Modify: `tools/linter/cclinter/src/analyzer/deep.rs`
 - Test: `tests/analyzer_tests.rs`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Add to `tests/analyzer_tests.rs`:
 
@@ -36,12 +36,12 @@ fn test_array_no_bounds_check() {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run: `cargo test --test analyzer_tests test_gets_buffer test_null_deref test_array_no_bounds`
 Expected: FAIL.
 
-- [ ] **Step 3: Implement `src/analyzer/deep.rs`**
+- [x] **Step 3: Implement `src/analyzer/deep.rs`**
 
 ```rust
 use crate::common::diag::{Diagnostic, Severity};
@@ -137,12 +137,12 @@ fn check_null_deref_patterns(source: &SourceFile) -> Vec<Diagnostic> {
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cargo test --test analyzer_tests`
 Expected: All PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/linter/cclinter/
