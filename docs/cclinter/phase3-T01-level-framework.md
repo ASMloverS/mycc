@@ -4,21 +4,22 @@
 - Modify: `tools/linter/cclinter/src/analyzer/mod.rs`
 - Test: `tests/analyzer_tests.rs`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `tests/analyzer_tests.rs`:
 
 ```rust
 use cclinter::analyzer::analyze_source;
 use cclinter::common::source::SourceFile;
-use cclinter::config::Config;
+use cclinter::config::{AnalysisConfig, AnalysisLevel};
 use std::path::PathBuf;
 
 #[test]
 fn test_none_level_no_diags() {
     let input = "int main() { return 0; }\n";
     let src = SourceFile::from_string(input, PathBuf::from("test.c"));
-    let diags = analyze_source(&src, "none");
+    let config = AnalysisConfig::default();
+    let diags = analyze_source(&src, &AnalysisLevel::None, &config);
     assert!(diags.is_empty());
 }
 
@@ -26,25 +27,26 @@ fn test_none_level_no_diags() {
 fn test_basic_level_runs() {
     let input = "int main() { return 0; }\n";
     let src = SourceFile::from_string(input, PathBuf::from("test.c"));
-    let diags = analyze_source(&src, "basic");
-    assert!(diags.len() >= 0);
+    let config = AnalysisConfig::default();
+    let _ = analyze_source(&src, &AnalysisLevel::Basic, &config);
 }
 
 #[test]
-fn test_invalid_level_defaults_none() {
-    let input = "int x;\n";
-    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
-    let diags = analyze_source(&src, "invalid");
+fn test_empty_source() {
+    let input = "";
+    let src = SourceFile::from_string(input, PathBuf::from("empty.c"));
+    let config = AnalysisConfig::default();
+    let diags = analyze_source(&src, &AnalysisLevel::Deep, &config);
     assert!(diags.is_empty());
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run: `cargo test --test analyzer_tests`
 Expected: FAIL.
 
-- [ ] **Step 3: Implement `src/analyzer/mod.rs`**
+- [x] **Step 3: Implement `src/analyzer/mod.rs`**
 
 ```rust
 pub mod basic;
@@ -53,22 +55,23 @@ pub mod deep;
 
 use crate::common::diag::Diagnostic;
 use crate::common::source::SourceFile;
+use crate::config::{AnalysisConfig, AnalysisLevel};
 
-pub fn analyze_source(source: &SourceFile, level: &str) -> Vec<Diagnostic> {
+pub fn analyze_source(source: &SourceFile, level: &AnalysisLevel, config: &AnalysisConfig) -> Vec<Diagnostic> {
     match level {
-        "basic" => basic::check(source),
-        "strict" => {
-            let mut d = basic::check(source);
-            d.extend(strict::check(source));
-            d
+        AnalysisLevel::None => vec![],
+        AnalysisLevel::Basic => basic::check(source, config),
+        AnalysisLevel::Strict => {
+            let mut diags = basic::check(source, config);
+            diags.extend(strict::check(source, config));
+            diags
         }
-        "deep" => {
-            let mut d = basic::check(source);
-            d.extend(strict::check(source));
-            d.extend(deep::check(source));
-            d
+        AnalysisLevel::Deep => {
+            let mut diags = basic::check(source, config);
+            diags.extend(strict::check(source, config));
+            diags.extend(deep::check(source, config));
+            diags
         }
-        _ => vec![],
     }
 }
 ```
@@ -78,8 +81,9 @@ Create `src/analyzer/basic.rs`:
 ```rust
 use crate::common::diag::Diagnostic;
 use crate::common::source::SourceFile;
+use crate::config::AnalysisConfig;
 
-pub fn check(_source: &SourceFile) -> Vec<Diagnostic> {
+pub fn check(_source: &SourceFile, _config: &AnalysisConfig) -> Vec<Diagnostic> {
     vec![]
 }
 ```
@@ -89,8 +93,9 @@ Create `src/analyzer/strict.rs`:
 ```rust
 use crate::common::diag::Diagnostic;
 use crate::common::source::SourceFile;
+use crate::config::AnalysisConfig;
 
-pub fn check(_source: &SourceFile) -> Vec<Diagnostic> {
+pub fn check(_source: &SourceFile, _config: &AnalysisConfig) -> Vec<Diagnostic> {
     vec![]
 }
 ```
@@ -100,18 +105,19 @@ Create `src/analyzer/deep.rs`:
 ```rust
 use crate::common::diag::Diagnostic;
 use crate::common::source::SourceFile;
+use crate::config::AnalysisConfig;
 
-pub fn check(_source: &SourceFile) -> Vec<Diagnostic> {
+pub fn check(_source: &SourceFile, _config: &AnalysisConfig) -> Vec<Diagnostic> {
     vec![]
 }
 ```
 
-- [ ] **Step 4: Run tests**
+- [x] **Step 4: Run tests**
 
 Run: `cargo test --test analyzer_tests`
 Expected: All PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/linter/cclinter/

@@ -124,6 +124,8 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
+    let mut seen: HashSet<(String, usize, String)> = HashSet::new();
+
     if !args.format_only {
         let check_config = &config.check;
         let runtime_err = AtomicU8::new(0);
@@ -143,7 +145,6 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             .collect();
         exit_code |= runtime_err.load(Ordering::Relaxed);
 
-        let mut seen: HashSet<(String, usize, String)> = HashSet::new();
         for diag in &all_diags {
             let key = (diag.file.clone(), diag.line, diag.rule_id.clone());
             if seen.insert(key) {
@@ -153,8 +154,42 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
             }
         }
 
-        if !seen.is_empty() {
+        if !all_diags.is_empty() {
             exit_code |= 2;
+        }
+    }
+
+    if !args.format_only {
+        let analysis_config = &config.analysis;
+        let analysis_level = &analysis_config.level;
+        let analysis_runtime_err = AtomicU8::new(0);
+        let all_analysis_diags: Vec<crate::common::diag::Diagnostic> = files
+            .par_iter()
+            .flat_map(|file_path| {
+                let source = match crate::common::source::SourceFile::load(file_path) {
+                    Ok(s) => s,
+                    Err(e) => {
+                        eprintln!("error loading file for analysis: {e}");
+                        analysis_runtime_err.store(8, Ordering::Relaxed);
+                        return Vec::new();
+                    }
+                };
+                crate::analyzer::analyze_source(&source, analysis_level, analysis_config)
+            })
+            .collect();
+        exit_code |= analysis_runtime_err.load(Ordering::Relaxed);
+
+        for diag in &all_analysis_diags {
+            let key = (diag.file.clone(), diag.line, diag.rule_id.clone());
+            if seen.insert(key) {
+                if args.verbose || !args.quiet {
+                    eprintln!("{diag}");
+                }
+            }
+        }
+
+        if !all_analysis_diags.is_empty() {
+            exit_code |= 4;
         }
     }
 
