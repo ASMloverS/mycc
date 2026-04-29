@@ -1,7 +1,79 @@
-use cclinter::analyzer::analyze_source;
+use cclinter::analyzer::{analyze_source, basic};
 use cclinter::common::source::SourceFile;
 use cclinter::config::{AnalysisConfig, AnalysisLevel};
 use std::path::PathBuf;
+
+mod common;
+
+use std::process::Command;
+
+fn bin() -> std::path::PathBuf {
+    common::get_bin()
+}
+
+#[test]
+fn test_non_void_missing_return() {
+    let input = "int foo() { int x = 1; }\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = basic::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-missing-return"));
+}
+
+#[test]
+fn test_implicit_int_conversion() {
+    let input = "float x = 42;\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = basic::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-implicit-conversion"));
+}
+
+#[test]
+fn test_void_no_return_ok() {
+    let input = "void foo() { return; }\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = basic::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-missing-return"));
+}
+
+#[test]
+fn test_non_void_with_return_ok() {
+    let input = "int foo() { return 1; }\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = basic::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-missing-return"));
+}
+
+#[test]
+fn test_float_with_decimal_ok() {
+    let input = "float x = 3.14;\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = basic::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-implicit-conversion"));
+}
+
+#[test]
+fn test_double_implicit_conversion() {
+    let input = "double y = 100;\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = basic::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-implicit-conversion"));
+}
+
+#[test]
+fn test_missing_return_multiline() {
+    let input = "int bar(int a) {\n  int b = a + 1;\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = basic::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-missing-return"));
+}
+
+#[test]
+fn test_empty_source_basic() {
+    let input = "";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = basic::check(&src, &AnalysisConfig::default());
+    assert!(diags.is_empty());
+}
 
 #[test]
 fn test_none_level_no_diags() {
@@ -49,12 +121,68 @@ fn test_empty_source() {
     assert!(diags.is_empty());
 }
 
-mod common;
+#[test]
+fn test_static_non_void_missing_return() {
+    let input = "static int foo() { int x = 1; }\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = basic::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-missing-return"));
+}
 
-use std::process::Command;
+#[test]
+fn test_return_inside_nested_braces() {
+    let input = "int foo() { if (cond) { return 1; } }\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = basic::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-missing-return"));
+}
 
-fn bin() -> std::path::PathBuf {
-    common::get_bin()
+#[test]
+fn test_implicit_conv_comment_ignored() {
+    let input = "// float x = 42;\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = basic::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-implicit-conversion"));
+}
+
+#[test]
+fn test_implicit_conv_zero_ok() {
+    let input = "float x = 0;\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = basic::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-implicit-conversion"));
+}
+
+#[test]
+fn test_implicit_conv_negative() {
+    let input = "float x = -1;\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = basic::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-implicit-conversion"));
+}
+
+#[test]
+fn test_uninit_var_detected() {
+    let input = "int main() {\n  int x;\n  printf(\"%d\", x);\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = basic::check(&src, &AnalysisConfig::default());
+    assert!(diags.iter().any(|d| d.rule_id == "bugprone-uninit"));
+}
+
+#[test]
+fn test_uninit_var_assigned_ok() {
+    let input = "int main() {\n  int x;\n  x = 5;\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = basic::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-uninit"));
+}
+
+#[test]
+fn test_uninit_var_init_ok() {
+    let input = "int main() {\n  int x = 5;\n}\n";
+    let src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    let diags = basic::check(&src, &AnalysisConfig::default());
+    assert!(!diags.iter().any(|d| d.rule_id == "bugprone-uninit"));
 }
 
 #[test]

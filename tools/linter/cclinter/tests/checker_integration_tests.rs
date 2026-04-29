@@ -79,7 +79,7 @@ fn test_no_violations_checker_exit_0() {
 fn test_exit_code_3_format_and_style() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("both.c");
-    fs::write(&file, b"int x;\t\n").unwrap();
+    fs::write(&file, "int unused_var = 99;\t\n").unwrap();
 
     let output = Command::new(bin())
         .args(["--check", file.to_str().unwrap()])
@@ -189,7 +189,7 @@ fn test_different_rules_same_line_both_reported() {
 fn test_quiet_suppresses_checker_output() {
     let dir = tempfile::tempdir().unwrap();
     let file = dir.path().join("quiet.c");
-    fs::write(&file, "int x;\n").unwrap();
+    fs::write(&file, "int unused_var = 1;\n").unwrap();
 
     let output = Command::new(bin())
         .args(["--quiet", file.to_str().unwrap()])
