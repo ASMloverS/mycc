@@ -48,20 +48,14 @@ Three rules implemented:
 - `bugprone-implicit-conversion` — detects integer-to-float/double assignment
 - `bugprone-uninit` — detects potentially uninitialized local variables
 
-Helper functions:
-- `strip_line_comment` — masks `//` comments before regex matching
-- `line_has_return` — unified return detection using `contains`
-
 ```rust
 use crate::common::diag::{Diagnostic, Severity};
-use crate::common::source::SourceFile;
+use crate::common::source::{strip_line_comment, SourceFile};
 use crate::config::AnalysisConfig;
 use regex::Regex;
 use std::collections::HashSet;
 use std::sync::LazyLock;
-```
 
-```rust
 pub fn check(source: &SourceFile, _config: &AnalysisConfig) -> Vec<Diagnostic> {
     let mut diags = Vec::new();
     diags.extend(check_missing_return(source));
@@ -70,6 +64,8 @@ pub fn check(source: &SourceFile, _config: &AnalysisConfig) -> Vec<Diagnostic> {
     diags
 }
 ```
+
+Key: takes `(source: &SourceFile, _config: &AnalysisConfig)`. Uses `strip_line_comment` from `source.rs` for accurate code analysis. `line_has_return` checks both `return ` and `return;`. Function detection via `FN_RE` LazyLock regex. Uninit check tracks declarations vs assignments via `HashSet`.
 
 - [x] **Step 4: Run tests**
 

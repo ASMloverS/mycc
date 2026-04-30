@@ -42,13 +42,14 @@ fn test_diag_with_source_line() {
 Run: `cargo test --test diag_tests`
 Expected: FAIL.
 
-- [ ] **Step 3: Expand `src/common/diag.rs`**
+- [x] **Step 3: Expand `src/common/diag.rs`**
 
 ```rust
-use colored::*;
+use colored::Colorize;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Severity {
+    Note,
     Warning,
     Error,
 }
@@ -65,51 +66,20 @@ pub struct Diagnostic {
 }
 
 impl Diagnostic {
-    pub fn new(file: String, line: usize, col: usize, severity: Severity, rule_id: &str, message: &str) -> Self {
-        Self {
-            file,
-            line,
-            col,
-            severity,
-            rule_id: rule_id.to_string(),
-            message: message.to_string(),
-            source_line: None,
-        }
-    }
-
-    pub fn new_with_source(file: String, line: usize, col: usize, severity: Severity, rule_id: &str, message: &str, source: &str) -> Self {
-        Self {
-            file,
-            line,
-            col,
-            severity,
-            rule_id: rule_id.to_string(),
-            message: message.to_string(),
-            source_line: Some(source.to_string()),
-        }
-    }
+    pub fn new(file: String, line: usize, col: usize, severity: Severity, rule_id: &str, message: &str) -> Self { ... }
+    pub fn new_with_source(file: String, line: usize, col: usize, severity: Severity, rule_id: &str, message: &str, source: &str) -> Self { ... }
 }
 
 impl std::fmt::Display for Diagnostic {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        let (sev_str, sev_colored) = match self.severity {
-            Severity::Warning => ("warning", "warning".yellow()),
-            Severity::Error => ("error", "error".red()),
-        };
-        write!(
-            f,
-            "{}:{}:{}: {}: {} [{}]",
-            self.file, self.line, self.col, sev_colored, self.message, self.rule_id
-        )?;
-        if let Some(ref src) = self.source_line {
-            write!(f, "\n  {}", src)?;
-        }
-        Ok(())
-    }
+    // Format: "file:line:col: severity: message [rule_id]"
+    // severity colored: Note=normal, Warning=yellow, Error=red
+    // source_line prefixed with "  " if present
 }
 ```
 
-- [ ] **Step 4: Expand `src/common/rule.rs`**
+Key: `Severity` has three levels: `Note`, `Warning`, `Error`. `colored` crate for terminal coloring.
+
+- [x] **Step 4: Expand `src/common/rule.rs`**
 
 ```rust
 use crate::common::diag::{Diagnostic, Severity};
@@ -118,6 +88,7 @@ use crate::common::source::SourceFile;
 pub trait Rule {
     fn id(&self) -> &str;
     fn description(&self) -> &str;
+    fn severity(&self) -> Severity;
     fn check(&self, source: &SourceFile) -> Vec<Diagnostic>;
 }
 ```

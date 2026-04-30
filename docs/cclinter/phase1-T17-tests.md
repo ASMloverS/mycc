@@ -5,7 +5,7 @@
 - Test fixtures: `tools/linter/cclinter/tests/fixtures/input/*.c`
 - Test fixtures: `tools/linter/cclinter/tests/fixtures/expected/*.c`
 
-- [ ] **Step 1: Create comprehensive input fixture**
+- [x] **Step 1: Create comprehensive input fixture**
 
 Create `tests/fixtures/input/full_test.c`:
 
@@ -39,7 +39,7 @@ void process(int x,int y)
 }
 ```
 
-- [ ] **Step 2: Create expected output fixture**
+- [x] **Step 2: Create expected output fixture**
 
 Create `tests/fixtures/expected/full_test.c`:
 
@@ -72,7 +72,7 @@ void process(int x, int y) {
 }
 ```
 
-- [ ] **Step 3: Create snapshot test runner**
+- [x] **Step 3: Create snapshot test runner**
 
 Create `tests/snapshot_tests.rs`:
 
@@ -83,55 +83,34 @@ use cclinter::formatter::format_source;
 use std::path::PathBuf;
 
 fn run_snapshot(input_name: &str) {
-    let input_dir = PathBuf::from("tests/fixtures/input");
-    let expected_dir = PathBuf::from("tests/fixtures/expected");
-    let input_path = input_dir.join(input_name);
-    let expected_path = expected_dir.join(input_name);
-
-    let input = std::fs::read_to_string(&input_path)
-        .unwrap_or_else(|e| panic!("Failed to read {}: {}", input_path.display(), e));
-    let expected = std::fs::read_to_string(&expected_path)
-        .unwrap_or_else(|e| panic!("Failed to read {}: {}", expected_path.display(), e));
-
-    let source = SourceFile::from_string(&input, input_path);
+    let input_path = PathBuf::from("tests/fixtures/input").join(input_name);
+    let expected_path = PathBuf::from("tests/fixtures/expected").join(input_name);
+    let input = std::fs::read_to_string(&input_path).unwrap();
+    let expected = std::fs::read_to_string(&expected_path).unwrap();
+    let mut source = SourceFile::from_string(&input, input_path);
     let config = Config::default();
-    let result = format_source(&source, &config);
-
-    let expected_normalized = expected.replace("\r\n", "\n");
-    let result_normalized = result.content.replace("\r\n", "\n");
-    assert_eq!(
-        result_normalized, expected_normalized,
-        "\n--- INPUT ---\n{}\n--- EXPECTED ---\n{}\n--- GOT ---\n{}",
-        input, expected_normalized, result_normalized
-    );
-}
-
-#[test]
-fn test_full_snapshot() {
-    run_snapshot("full_test.c");
-}
-
-#[test]
-fn test_encoding_snapshot() {
-    run_snapshot("encoding_test.c");
+    format_source(&mut source, &config.format).unwrap();
+    assert_eq!(source.content.replace("\r\n", "\n"), expected.replace("\r\n", "\n"));
 }
 ```
 
-- [ ] **Step 4: Run snapshot tests**
+Note: `format_source` takes `&mut SourceFile` + `&FormatConfig`, returns `Result<Vec<Diagnostic>, Error>`.
+
+- [x] **Step 4: Run snapshot tests**
 
 Run: `cargo test --test snapshot_tests`
 Expected: May fail initially — adjust expected fixtures until they match.
 
-- [ ] **Step 5: Iterate on fixtures**
+- [x] **Step 5: Iterate on fixtures**
 
 Run `cargo run -- -i tests/fixtures/input/full_test.c` to see actual output. Copy output to expected fixture. Re-run snapshot tests until all pass.
 
-- [ ] **Step 6: Run all tests**
+- [x] **Step 6: Run all tests**
 
 Run: `cargo test`
 Expected: All tests PASS — formatter_tests, config_tests, ignore_tests, cli_mode_tests, snapshot_tests.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add tools/linter/cclinter/

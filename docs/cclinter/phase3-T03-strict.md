@@ -45,89 +45,31 @@ Expected: FAIL.
 
 ```rust
 use crate::common::diag::{Diagnostic, Severity};
-use crate::common::source::SourceFile;
+use crate::common::source::{strip_line_comment, SourceFile};
+use crate::config::AnalysisConfig;
 use regex::Regex;
+use std::collections::HashSet;
+use std::sync::LazyLock;
 
-pub fn check(source: &SourceFile) -> Vec<Diagnostic> {
+pub fn check(source: &SourceFile, _config: &AnalysisConfig) -> Vec<Diagnostic> {
+    let lines = source.lines();
     let mut diags = Vec::new();
-    diags.extend(check_resource_leaks(source));
-    diags.extend(check_dead_branches(source));
-    diags.extend(check_suspicious_casts(source));
-    diags
-}
-
-fn check_resource_leaks(source: &SourceFile) -> Vec<Diagnostic> {
-    let alloc_re = Regex::new(r"\b(malloc|calloc|realloc)\s*\(").unwrap();
-    let free_re = Regex::new(r"\bfree\s*\(").unwrap();
-    let mut alloc_count = 0usize;
-    let mut free_count = 0usize;
-    let mut alloc_lines: Vec<(usize, String)> = Vec::new();
-    for (i, line) in source.lines.iter().enumerate() {
-        if alloc_re.is_match(line) {
-            alloc_count += 1;
-            alloc_lines.push((i + 1, line.clone()));
-        }
-        if free_re.is_match(line) {
-            free_count += 1;
-        }
-    }
-    let mut diags = Vec::new();
-    if alloc_count > free_count {
-        for (line_num, line) in &alloc_lines {
-            diags.push(Diagnostic::new_with_source(
-                source.path.to_string_lossy().to_string(),
-                *line_num, 1,
-                Severity::Warning,
-                "bugprone-resource-leak",
-                "Allocated memory may not be freed",
-                line,
-            ));
-        }
-    }
-    diags
-}
-
-fn check_dead_branches(source: &SourceFile) -> Vec<Diagnostic> {
-    let re = Regex::new(r"^\s*if\s*\(\s*(0|false)\s*\)").unwrap();
-    let mut diags = Vec::new();
-    for (i, line) in source.lines.iter().enumerate() {
-        if re.is_match(line) {
-            diags.push(Diagnostic::new_with_source(
-                source.path.to_string_lossy().to_string(),
-                i + 1, 1,
-                Severity::Warning,
-                "bugprone-dead-branch",
-                "Condition is always false",
-                line,
-            ));
-        }
-    }
-    diags
-}
-
-fn check_suspicious_casts(source: &SourceFile) -> Vec<Diagnostic> {
-    let re = Regex::new(r"\(\s*int\s*\)\s*\w+\s*;").unwrap();
-    let ptr_decl_re = Regex::new(r"\b\w+\s*\*\s*\w+").unwrap();
-    let mut diags = Vec::new();
-    for (i, line) in source.lines.iter().enumerate() {
-        if re.is_match(line) {
-            let nearby = source.lines.iter().take(i + 5).skip(i.saturating_sub(3));
-            let has_ptr = nearby.any(|l| ptr_decl_re.is_match(l) || l.contains("ptr") || l.contains("pointer"));
-            if has_ptr || line.contains("ptr") {
-                diags.push(Diagnostic::new_with_source(
-                    source.path.to_string_lossy().to_string(),
-                    i + 1, 1,
-                    Severity::Warning,
-                    "bugprone-suspicious-cast",
-                    "Casting pointer to int may lose data",
-                    line,
-                ));
-            }
-        }
-    }
+    diags.extend(check_resource_leaks(&lines, source));
+    diags.extend(check_dead_branches(&lines, source));
+    diags.extend(check_suspicious_casts(&lines, source));
     diags
 }
 ```
+
+Three rules:
+
+1. **`bugprone-resource-leak`** — Function-scoped tracking: counts malloc/calloc/realloc vs free per function. Tracks allocation variable names; if function returns an allocation variable, suppresses leak warning. Uses `brace_depth` for function boundary detection.
+
+2. **`bugprone-dead-branch`** — Detects `if (0)`, `if (false)`, `else if (0/false)`, and `#if 0` preprocessor blocks.
+
+3. **`bugprone-suspicious-cast`** — First collects pointer declarations (`PTR_DECL_RE`), then checks if `(int)var` casts involve known pointer variables.
+
+Key: takes `(&lines, source)`. Uses `strip_line_comment`. Resource leak detection is function-scoped (not file-scoped).
 
 - [x] **Step 4: Run tests**
 

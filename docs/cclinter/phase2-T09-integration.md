@@ -5,94 +5,69 @@
 - Modify: `tools/linter/cclinter/src/cli.rs`
 - Test: `tests/checker_integration_tests.rs`
 
-- [ ] **Step 1: Wire up `check_source` in `src/checker/mod.rs`**
+- [x] **Step 1: Wire up `check_source` in `src/checker/mod.rs`**
 
 ```rust
-pub mod naming;
-pub mod include_guard;
-pub mod complexity;
-pub mod magic_number;
-pub mod unused;
-pub mod prohibited;
-pub mod forward_decl;
-
-use crate::common::diag::Diagnostic;
-use crate::common::source::SourceFile;
-use crate::config::Config;
-
-pub fn check_source(source: &SourceFile, config: &Config) -> Vec<Diagnostic> {
+pub fn check_source(source: &SourceFile, config: &CheckConfig) -> Vec<Diagnostic> {
     let mut diags = Vec::new();
-    if let Some(ref naming) = config.check.naming {
-        diags.extend(naming::check_naming(source, naming.variable.as_deref().unwrap_or("snake_case"), "variable"));
-        diags.extend(naming::check_naming(source, naming.function.as_deref().unwrap_or("snake_case"), "function"));
-        if let Some(ref style) = naming.macro {
-            diags.extend(naming::check_naming(source, style, "macro"));
-        }
-    }
-    diags.extend(include_guard::check_includes(source));
-    if let Some(ref complexity) = config.check.complexity {
-        diags.extend(complexity::check_complexity(
-            source,
-            complexity.max_function_lines.unwrap_or(100),
-            complexity.max_file_lines.unwrap_or(2000),
-            complexity.max_nesting_depth.unwrap_or(5),
-        ));
-    }
-    if let Some(ref mn) = config.check.magic_number {
-        diags.extend(magic_number::check_magic_numbers(
-            source,
-            mn.enabled.unwrap_or(true),
-            &mn.allowed.clone().unwrap_or_default(),
-        ));
-    }
-    diags.extend(unused::check_unused(source));
-    if let Some(ref pf) = config.check.prohibited_functions {
-        let use_default = pf.use_default.unwrap_or(true);
-        let extra = pf.extra.as_deref().unwrap_or(&[]);
-        let remove = pf.remove.as_deref().unwrap_or(&[]);
-        diags.extend(prohibited::check_prohibited(source, use_default, extra, remove));
-    }
-    diags.extend(forward_decl::check_forward_decls(source));
+    diags.extend(naming::check_naming(source, config.naming.function.as_str(), "function"));
+    diags.extend(naming::check_naming(source, config.naming.r#macro.as_str(), "macro"));
+    diags.extend(naming::check_naming(source, config.naming.variable.as_str(), "variable"));
+    diags.extend(naming::check_naming(source, config.naming.r#type.as_str(), "type"));
+    diags.extend(naming::check_naming(source, config.naming.constant.as_str(), "constant"));
+    diags.extend(include_guard::check_include_guard(source, &config.include_guard));
+    diags.extend(complexity::check_complexity(source, &config.complexity));
+    diags.extend(magic_number::check_magic_number(source, &config.magic_number));
+    diags.extend(unused::check_unused(source, &config.unused));
+    diags.extend(prohibited::check_prohibited(
+        source,
+        config.prohibited_functions.use_default,
+        &config.prohibited_functions.extra,
+        &config.prohibited_functions.remove,
+    ));
+    diags.extend(forward_decl::check_forward_decl(source));
     diags
 }
 ```
 
-- [ ] **Step 2: Update `src/cli.rs` — checker invocation + exit code 2 + dedup**
+Key: takes `&CheckConfig` (not `&Config`). All sub-checkers use their respective config structs from `CheckConfig`. Naming checks all 5 kinds. `NamingStyle.as_str()` converts enum to string slice.
 
-After the formatter loop, add checker invocation. Use `HashSet` for dedup (see design doc "Diagnostic Deduplication"):
+- [x] **Step 2: Update `src/cli.rs` — checker invocation + exit code 2 + dedup**
+
+After the formatter loop, add checker invocation. Uses `HashSet` for dedup across checker and analyzer:
 
 ```rust
-use std::collections::HashSet;
-
 let mut seen: HashSet<(String, usize, String)> = HashSet::new();
 
 if !args.format_only {
-    let check_results: Vec<Vec<Diagnostic>> = files
+    let check_config = &config.check;
+    let runtime_err = AtomicU8::new(0);
+    let all_diags: Vec<Diagnostic> = files
         .par_iter()
-        .filter_map(|file_path| {
-            let content = std::fs::read_to_string(file_path).ok()?;
-            let source = crate::common::source::SourceFile::from_string(&content, file_path.clone());
-            Some(crate::checker::check_source(&source, &config))
+        .flat_map(|file_path| {
+            let source = SourceFile::load(file_path)?;
+            checker::check_source(&source, check_config)
         })
         .collect();
+    exit_code |= runtime_err.load(Ordering::Relaxed);
 
-    for diags in &check_results {
-        for d in diags {
-            let key = (d.file.clone(), d.line, d.rule_id.clone());
-            if seen.insert(key) {
-                if args.verbose || !args.quiet {
-                    eprintln!("{}", d);
-                }
+    for diag in &all_diags {
+        let key = (diag.file.clone(), diag.line, diag.rule_id.clone());
+        if seen.insert(key) {
+            if args.verbose || !args.quiet {
+                eprintln!("{diag}");
             }
         }
-        if !diags.is_empty() {
-            exit_code |= 2;
-        }
+    }
+    if !all_diags.is_empty() {
+        exit_code |= 2;
     }
 }
 ```
 
-- [ ] **Step 3: Write integration test**
+Key: `check_source` takes `&CheckConfig`. `SourceFile::load()` used (reads from disk). `AtomicU8` for runtime error tracking. Dedup key: `(file, line, rule_id)`. Output suppressed only when both `!verbose && quiet`.
+
+- [x] **Step 3: Write integration test**
 
 Create `tests/checker_integration_tests.rs`:
 
@@ -111,7 +86,7 @@ fn test_checker_flags_issues() {
 }
 ```
 
-- [ ] **Step 4: Create test fixture**
+- [x] **Step 4: Create test fixture**
 
 Create `tests/fixtures/checker_test.c`:
 
@@ -120,12 +95,12 @@ int BadName = 42;
 void bad_fn() { strcpy(buf, src); }
 ```
 
-- [ ] **Step 5: Run all tests**
+- [x] **Step 5: Run all tests**
 
 Run: `cargo test`
 Expected: All PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tools/linter/cclinter/

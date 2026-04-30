@@ -51,79 +51,32 @@ Expected: FAIL.
 
 ```rust
 use crate::common::source::SourceFile;
-use std::path::PathBuf;
+use crate::config::FormatConfig;
 
-pub fn fix_line_length(source: &SourceFile, column_limit: usize) -> SourceFile {
-    let indent_width = 2;
-    let lines: Vec<String> = source
-        .lines
-        .iter()
-        .flat_map(|line| {
-            if line.len() <= column_limit {
-                return vec![line.clone()];
-            }
-            wrap_line(line, column_limit, indent_width)
-        })
-        .collect();
-    let content = lines.join("\n");
-    let has_newline = source.content.ends_with('\n');
-    let final_content = if has_newline && !content.is_empty() {
-        format!("{}\n", content)
-    } else {
-        content
-    };
-    SourceFile::from_string(&final_content, source.path.clone())
-}
-
-fn wrap_line(line: &str, limit: usize, indent_width: usize) -> Vec<String> {
-    let leading_ws: String = line.chars().take_while(|c| c.is_whitespace()).collect();
-    let base_indent = format!("{}{}", leading_ws, " ".repeat(indent_width * 2));
-    let mut result = vec![line.to_string()];
-    let mut current = line.to_string();
-    while current.len() > limit {
-        let break_pos = find_break_point(&current, limit);
-        if break_pos <= leading_ws.len() + 4 {
-            break;
-        }
-        let before = current[..break_pos].trim_end().to_string();
-        let after = format!("{}{}", base_indent, current[break_pos..].trim_start());
-        result.clear();
-        result.push(before);
-        if after.len() > limit {
-            result.extend(wrap_line(&after, limit, indent_width));
-        } else {
-            result.push(after);
-        }
-        current = after;
-        break;
-    }
-    result
-}
-
-fn find_break_point(line: &str, limit: usize) -> usize {
-    let candidates = [',', ' ', ';', '(', ')', '|', '&'];
-    let mut best = 0;
-    for (i, ch) in line.char_indices() {
-        if i >= limit {
-            break;
-        }
-        if candidates.contains(&ch) {
-            best = i + 1;
-        }
-    }
-    if best > 0 { best } else { limit }
+pub fn fix_line_length(
+    source: &mut SourceFile,
+    config: &FormatConfig,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let limit = config.column_limit;
+    let indent_width = config.indent_width;
+    // 1. merge_continuations: joins lines that appear to be continuations
+    //    (skips preprocessor, comments, block comments, lines ending with ; { } ) :)
+    // 2. Wraps lines exceeding column_limit using break points
+    // Break point priority: comma(3) > space/semicolon(2) > close-paren(1) > open-paren/bitops(0)
+    // Avoids breaking inside string literals (tracked via string_spans)
+    // Continuation indent = base indent + indent_width
+    Ok(())
 }
 ```
 
+Key: takes `&mut SourceFile` + `&FormatConfig`. Merges continuation lines first, then wraps. Uses char-count (not byte-count) for column limit. Avoids breaking inside string literals.
+
 - [x] **Step 4: Register module, update pipeline**
 
-Add `pub mod line_length;` to `src/formatter/mod.rs`. Update `format_source`:
+Add `pub mod line_length;` to `src/formatter/mod.rs`. Call in `format_source`:
 
 ```rust
-let source = line_length::fix_line_length(
-    &source,
-    config.format.column_limit.unwrap_or(120),
-);
+line_length::fix_line_length(source, config)?;
 ```
 
 - [x] **Step 5: Run tests**

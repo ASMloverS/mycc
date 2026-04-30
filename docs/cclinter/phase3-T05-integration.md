@@ -7,40 +7,37 @@
 
 - [x] **Step 1: Wire up analyzer in `src/cli.rs`**
 
-After the checker section, add analyzer invocation. Reuse `seen` HashSet from T09 for dedup:
+After the checker section, add analyzer invocation. Reuse `seen` HashSet for dedup:
 
 ```rust
-if !args.format_only {
-    let level = match &config.analysis.level {
-        Some(l) => l.as_str(),
-        None => "none",
-    };
-    if level != "none" {
-        let analysis_results: Vec<Vec<Diagnostic>> = files
-            .par_iter()
-            .filter_map(|file_path| {
-                let content = std::fs::read_to_string(file_path).ok()?;
-                let source = crate::common::source::SourceFile::from_string(&content, file_path.clone());
-                Some(crate::analyzer::analyze_source(&source, level))
-            })
-            .collect();
+if !args.format_only && config.analysis.level != AnalysisLevel::None {
+    let analysis_config = &config.analysis;
+    let analysis_level = &analysis_config.level;
+    let analysis_runtime_err = AtomicU8::new(0);
+    let all_analysis_diags: Vec<Diagnostic> = files
+        .par_iter()
+        .flat_map(|file_path| {
+            let source = SourceFile::load(file_path)?;
+            analyzer::analyze_source(&source, analysis_level, analysis_config)
+        })
+        .collect();
+    exit_code |= analysis_runtime_err.load(Ordering::Relaxed);
 
-        for diags in &analysis_results {
-            for d in diags {
-                let key = (d.file.clone(), d.line, d.rule_id.clone());
-                if seen.insert(key) {
-                    if args.verbose || !args.quiet {
-                        eprintln!("{}", d);
-                    }
-                }
-            }
-            if !diags.is_empty() {
-                exit_code |= 4;
+    for diag in &all_analysis_diags {
+        let key = (diag.file.clone(), diag.line, diag.rule_id.clone());
+        if seen.insert(key) {
+            if args.verbose || !args.quiet {
+                eprintln!("{diag}");
             }
         }
     }
+    if !all_analysis_diags.is_empty() {
+        exit_code |= 4;
+    }
 }
 ```
+
+Key: uses `AnalysisLevel` enum directly (not string comparison). Passes both `analysis_level` and `analysis_config` to `analyze_source`. Skips if `level == None` or `--format-only`. Uses same `seen` HashSet for cross-engine dedup. `AtomicU8` for runtime error tracking across threads.
 
 - [x] **Step 2: Create integration test fixture**
 

@@ -1,11 +1,11 @@
-### Task 03: Include Guard + Duplicate Include Detection
+﻿### Task 03: Include Guard + Duplicate Include Detection
 
 **Files:**
 - Modify: `tools/linter/cclinter/src/checker/mod.rs`
 - Create: `tools/linter/cclinter/src/checker/include_guard.rs`
 - Test: `tests/checker_tests.rs`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Add to `tests/checker_tests.rs`:
 
@@ -45,78 +45,44 @@ fn test_no_guard_for_c_file() {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run: `cargo test --test checker_tests test_missing_include test_has_pragma test_duplicate_include test_no_guard`
 Expected: FAIL.
 
-- [ ] **Step 3: Create `src/checker/include_guard.rs`**
+- [x] **Step 3: Create `src/checker/include_guard.rs`**
 
 ```rust
 use crate::common::diag::{Diagnostic, Severity};
 use crate::common::source::SourceFile;
+use crate::config::{IncludeGuardConfig, IncludeGuardStyle};
 use regex::Regex;
 use std::collections::HashSet;
+use std::sync::LazyLock;
 
-pub fn check_includes(source: &SourceFile) -> Vec<Diagnostic> {
-    let mut diags = Vec::new();
-    let include_re = Regex::new(r#"#\s*include\s+[<"]([^>"]+)[>"]"#).unwrap();
-    let is_header = source
-        .path
-        .extension()
-        .map(|e| e == "h")
-        .unwrap_or(false);
-
-    let mut seen = HashSet::new();
-    for (line_num, line) in source.lines.iter().enumerate() {
-        if let Some(caps) = include_re.captures(line) {
-            let header = &caps[1];
-            if seen.contains(header) {
-                diags.push(Diagnostic::new_with_source(
-                    source.path.to_string_lossy().to_string(),
-                    line_num + 1,
-                    1,
-                    Severity::Warning,
-                    "bugprone-duplicate-include",
-                    &format!("Duplicate include: {}", header),
-                    line,
-                ));
-            }
-            seen.insert(header.to_string());
-        }
-    }
-
-    if is_header {
-        let has_guard = source.lines.iter().any(|l| l.trim().starts_with("#pragma once"))
-            || source.lines.iter().any(|l| l.contains("#ifndef") && l.contains("_H"));
-        if !has_guard && !source.lines.is_empty() {
-            diags.push(Diagnostic::new(
-                source.path.to_string_lossy().to_string(),
-                1,
-                1,
-                Severity::Warning,
-                "bugprone-missing-include-guard",
-                "Header file is missing an include guard",
-            ));
-        }
-    }
-
-    diags
+pub fn check_include_guard(source: &SourceFile, config: &IncludeGuardConfig) -> Vec<Diagnostic> {
+    // 1. Duplicate include detection using HashSet<String>
+    // 2. Header guard check for .h, .hpp, .hh, .hxx files
+    //    - PragmaOnce style: checks for `#pragma once`
+    //    - Ifndef style: checks first 10 lines for `#ifndef`
+    //    - Config style determines which to check
 }
 ```
 
-- [ ] **Step 4: Register module, update `check_source`**
+Key: takes `&IncludeGuardConfig` parameter. Header extensions: `h`, `hpp`, `hh`, `hxx`. Guard check respects `config.style` (PragmaOnce or Ifndef). Rule IDs: `bugprone-duplicate-include`, `bugprone-missing-include-guard`.
+
+- [x] **Step 4: Register module, update `check_source`**
 
 Add `pub mod include_guard;` to `src/checker/mod.rs`.
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cargo test --test checker_tests`
 Expected: All PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tools/linter/cclinter/
-git commit -m "✨ feat(cclinter): include guard and duplicate include detection"
+git commit -m "鉁?feat(cclinter): include guard and duplicate include detection"
 ```

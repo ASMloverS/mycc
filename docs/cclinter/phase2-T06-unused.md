@@ -37,76 +37,19 @@ Expected: FAIL.
 ```rust
 use crate::common::diag::{Diagnostic, Severity};
 use crate::common::source::SourceFile;
+use crate::config::UnusedConfig;
 use regex::Regex;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
+use std::sync::LazyLock;
 
-pub fn check_unused(source: &SourceFile) -> Vec<Diagnostic> {
-    let mut diags = Vec::new();
-    diags.extend(check_unused_vars(source));
-    diags.extend(check_unused_macros(source));
-    diags
-}
-
-fn check_unused_vars(source: &SourceFile) -> Vec<Diagnostic> {
-    let decl_re = Regex::new(r"\b(?:int|char|float|double|long|short|void|unsigned|static|\w+_t)\s+\*?\s*(\w+)\s*[=;]").unwrap();
-    let mut declared: HashMap<String, (usize, String)> = HashMap::new();
-    let mut used: HashSet<String> = HashSet::new();
-    let use_re = Regex::new(r"\b(\w+)\b").unwrap();
-    for (i, line) in source.lines.iter().enumerate() {
-        for caps in decl_re.captures_iter(line) {
-            let name = caps[1].to_string();
-            declared.entry(name).or_insert((i + 1, line.clone()));
-        }
-        for caps in use_re.captures_iter(line) {
-            used.insert(caps[1].to_string());
-        }
-    }
-    let mut diags = Vec::new();
-    for (name, (line_num, line)) in &declared {
-        let count = used.iter().filter(|u| *u == name).count();
-        if count <= 1 {
-            diags.push(Diagnostic::new_with_source(
-                source.path.to_string_lossy().to_string(),
-                *line_num, 1,
-                Severity::Warning,
-                "bugprone-unused-variable",
-                &format!("Variable '{}' is unused", name),
-                line,
-            ));
-        }
-    }
-    diags
-}
-
-fn check_unused_macros(source: &SourceFile) -> Vec<Diagnostic> {
-    let define_re = Regex::new(r"#define\s+(\w+)").unwrap();
-    let mut defined: HashMap<String, (usize, String)> = HashMap::new();
-    let use_re = Regex::new(r"\b(\w+)\b").unwrap();
-    for (i, line) in source.lines.iter().enumerate() {
-        if let Some(caps) = define_re.captures(line) {
-            let name = caps[1].to_string();
-            defined.entry(name).or_insert((i + 1, line.clone()));
-        }
-    }
-    let full_text = source.content.replace('#', " ");
-    let mut diags = Vec::new();
-    for (name, (line_num, line)) in &defined {
-        let full_re = Regex::new(&format!(r"\b{}\b", regex::escape(name))).unwrap();
-        let count = full_re.find_iter(&full_text).count();
-        if count <= 1 {
-            diags.push(Diagnostic::new_with_source(
-                source.path.to_string_lossy().to_string(),
-                *line_num, 1,
-                Severity::Warning,
-                "bugprone-unused-macro",
-                &format!("Macro '{}' is unused", name),
-                line,
-            ));
-        }
-    }
-    diags
+pub fn check_unused(source: &SourceFile, config: &UnusedConfig) -> Vec<Diagnostic> {
+    if !config.enabled { return vec![]; }
+    // check_unused_vars: declares → counts usage → flags if count <= 1
+    // check_unused_macros: #define names → counts usage outside define lines → flags if count == 0
 }
 ```
+
+Key: takes `&UnusedConfig` (configurable `enabled` flag). Variable check uses `HashMap<String, usize>` for declaration positions. Macro check excludes define lines from usage counting. Masks string literals and block comments. Known limitation: no scope awareness (may produce false positives/negatives). Rule IDs: `bugprone-unused-variable`, `bugprone-unused-macro`.
 
 - [x] **Step 4: Register module, run tests**
 

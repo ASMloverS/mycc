@@ -13,7 +13,8 @@ Rust C linter: format + style check + static analysis. `tools/linter/cclinter/`.
 | Parallel | rayon (`-j`) |
 | Config | `.cclinter.yaml` |
 | Ignore | `.cclinterignore` |
-| Output | clang-tidy style |
+| Output | clang-tidy style (`colored` crate) |
+| Severity | Note / Warning / Error |
 | Exit codes | Bitwise OR combinable |
 | Rule IDs | Descriptive naming |
 | Dist | `cargo build` → standalone binary |
@@ -25,16 +26,17 @@ Rust C linter: format + style check + static analysis. `tools/linter/cclinter/`.
 ```
 cclinter [OPTIONS] <PATHS...>
 
---config <FILE>        Config (search: --config → CWD → ancestor dirs → tool dir → built-in)
--i, --in-place         Modify in-place
---check                Check only (CI). Exit 1 if issues.
---diff                 Show diff, no modify
---format-only          Formatter only, skip checker + analyzer.
-                       Compatible with --check, --diff, -i.
---analysis-level <LVL> Override analysis.level: none | basic | strict | deep
--j, --jobs <N>         Parallelism (default: CPU count)
---exclude <PATTERN>    Extra excludes
--q / -v                Quiet / verbose
+--config <FILE>           Config (search: --config → CWD → ancestor dirs → tool dir → built-in)
+-i, --in-place            Modify in-place (mutually exclusive with --check, --diff)
+--check                   Check only (CI). Exit 1 if issues. (mutually exclusive with -i, --diff)
+--diff                    Show diff, no modify (mutually exclusive with -i, --check)
+--format-only             Formatter only, skip checker + analyzer.
+                          Compatible with --check, --diff, -i.
+--analysis-level <LVL>    Override analysis.level: none | basic | strict | deep
+-j, --jobs <N>            Parallelism (default: CPU count), must be >= 1
+--exclude <PATTERN>       Extra exclude patterns (append to .cclinterignore)
+-q, --quiet               Suppress diagnostic output
+-v, --verbose             Show config, diagnostics, and processing details
 ```
 
 ### Config Precedence
@@ -89,15 +91,16 @@ tools/linter/cclinter/
 │   ├── formatter/
 │   │   ├── mod.rs
 │   │   ├── encoding.rs          # UTF-8 / LF / trailing ws
-│   │   ├── indent.rs            # 2-space indent
+│   │   ├── indent.rs            # Brace-level indent (2-space default)
 │   │   ├── spacing.rs
-│   │   ├── braces.rs            # Attach style
+│   │   ├── braces.rs            # Attach / Breakout / AttachBreakout
 │   │   ├── blank_lines.rs
 │   │   ├── comments.rs          # /* */ → // (all)
-│   │   ├── line_length.rs       # 120 col wrap
-│   │   ├── alignment.rs         # Continuation + struct/enum
-│   │   ├── include_sort.rs      # Google 3-group
-│   │   └── pointer_style.rs     # int* p (left)
+│   │   ├── pointer_style.rs     # int* p (left) or int *p (right)
+│   │   ├── switch_indent.rs     # switch-case indentation
+│   │   ├── line_length.rs       # Column-limit wrap
+│   │   ├── alignment.rs         # Struct/enum field alignment
+│   │   └── include_sort.rs      # Google 3-group
 │   ├── checker/
 │   │   ├── mod.rs
 │   │   ├── naming.rs            # snake_case / UPPER_SNAKE_CASE / PascalCase
@@ -114,13 +117,30 @@ tools/linter/cclinter/
 │   │   └── deep.rs
 │   └── common/
 │       ├── mod.rs
-│       ├── diag.rs              # clang-tidy output
-│       ├── source.rs
-│       └── rule.rs
+│       ├── diag.rs              # clang-tidy output (Note/Warning/Error)
+│       ├── source.rs            # SourceFile + mask_string_literals, strip_line_comment
+│       ├── rule.rs
+│       └── string_utils.rs      # split_outside_strings
 ├── tests/
-│   ├── formatter_tests.rs
+│   ├── analyzer_tests.rs
+│   ├── checker_integration_tests.rs
 │   ├── checker_tests.rs
-│   └── fixtures/{input,expected}/
+│   ├── cli_mode_tests.rs
+│   ├── common/
+│   ├── complexity_tests.rs
+│   ├── config_tests.rs
+│   ├── diag_tests.rs
+│   ├── fixtures/{input,expected}/
+│   ├── formatter_tests.rs
+│   ├── forward_decl_tests.rs
+│   ├── ignore_tests.rs
+│   ├── include_guard_tests.rs
+│   ├── integration_tests.rs
+│   ├── magic_number_tests.rs
+│   ├── naming_tests.rs
+│   ├── prohibited_tests.rs
+│   ├── snapshot_tests.rs
+│   └── unused_tests.rs
 └── .cclinter.yaml
 ```
 
@@ -158,6 +178,8 @@ check:
   magic_number:
     enabled: true
     allowed: [0, 1, -1, 2]
+  unused:
+    enabled: true
   include_guard:
     style: pragma_once             # pragma_once | ifndef
   prohibited_functions:
@@ -168,8 +190,56 @@ check:
     # Effective = (built-in if use_default) + extra - remove
 
 analysis:
-  level: basic                     # none | basic | strict | deep
+  level: basic                     # none | basic | strict | deep (default: basic)
 ```
+
+## Key API Signatures
+
+### SourceFile (`common/source.rs`)
+
+```rust
+pub struct SourceFile {
+    pub path: PathBuf,
+    pub content: String,
+    pub original: String,
+}
+
+impl SourceFile {
+    pub fn load(path: &Path) -> Result<Self, Box<dyn Error>>;
+    pub fn from_string(content: &str, path: PathBuf) -> Self;
+    pub fn lines(&self) -> Vec<&str>;          // method, not a field
+    pub fn line_count(&self) -> usize;
+    pub fn is_modified(&self) -> bool;
+}
+```
+
+### Formatter Pipeline
+
+All formatters take `(&mut SourceFile, &FormatConfig) -> Result<(), Box<dyn Error>>`.
+
+```rust
+pub fn format_source(source: &mut SourceFile, config: &FormatConfig) -> Result<Vec<Diagnostic>, Box<dyn Error>>;
+```
+
+Pipeline order: encoding → indent → spacing → braces → blank_lines → comments → pointer_style → switch_indent → line_length → alignment → include_sort.
+
+### Checker
+
+```rust
+pub fn check_source(source: &SourceFile, config: &CheckConfig) -> Vec<Diagnostic>;
+```
+
+### Analyzer
+
+```rust
+pub fn analyze_source(source: &SourceFile, level: &AnalysisLevel, config: &AnalysisConfig) -> Vec<Diagnostic>;
+```
+
+Levels are cumulative: Strict = Basic + Strict; Deep = Basic + Strict + Deep.
+
+### Config (`config.rs`)
+
+All config structs use `#[serde(default)]` with non-Optional fields. Enums implement `Default`, `clap::ValueEnum`, `Serialize`, `Deserialize`. Config loading: `load_config(path: Option<&PathBuf>) -> Result<Config, Box<dyn Error>>`.
 
 ## Comment Conversion
 
@@ -189,7 +259,7 @@ Fn signature line-break · pointer alignment (`int* p`) · blank lines · switch
 **Include guard**: missing guard, duplicate includes
 **Complexity**: fn lines, file lines, nesting depth
 **Magic number**: literal detection + allowlist
-**Unused**: vars, macros, params
+**Unused**: vars, macros (configurable via `unused.enabled`)
 **Prohibited fns**: default list + YAML extend/remove
 **Forward decl**: missing in headers
 
@@ -199,8 +269,10 @@ Fn signature line-break · pointer alignment (`int* p`) · blank lines · switch
 |-------|-------|
 | none | Off |
 | basic | Implicit conv, missing return, uninit hints |
-| strict | Suspicious casts, dead branches, resource leaks |
-| deep | Buffer overflow patterns, null deref patterns |
+| strict | + Suspicious casts, dead branches, resource leaks |
+| deep | + Buffer overflow patterns, null deref patterns |
+
+Default: `basic`. CLI `--analysis-level` overrides `analysis.level` in YAML.
 
 ## Dependencies
 
@@ -267,5 +339,6 @@ tempfile = "3"
 
 - Win11 → `cclinter.exe`, Debian 12 → `cclinter`
 - Platform path handling for config lookup
-- `line_ending` config (default: `lf`)
-- `.cclinterignore` uses gitignore-style patterns
+- `line_ending` config: `lf` (default), `crlf`, `native` (currently encoding.rs normalizes to LF regardless)
+- `.cclinterignore` uses gitignore-style patterns (negation `!` not supported)
+- `encoding` config field exists but currently always normalizes to UTF-8/LF

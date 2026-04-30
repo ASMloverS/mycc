@@ -4,7 +4,7 @@
 - Modify: `tools/linter/cclinter/src/cli.rs`
 - Test: `tests/cli_mode_tests.rs`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Create `tests/cli_mode_tests.rs`:
 
@@ -43,12 +43,12 @@ fn test_diff_mode_shows_changes() {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run: `cargo test --test cli_mode_tests`
 Expected: FAIL — modes not implemented yet.
 
-- [ ] **Step 3: Implement mode logic in `src/cli.rs`**
+- [x] **Step 3: Implement mode logic in `src/cli.rs`**
 
 ```rust
 use similar::{ChangeTag, TextDiff};
@@ -56,76 +56,46 @@ use std::path::PathBuf;
 
 pub fn run() -> Result<(), Box<dyn std::error::Error>> {
     let args = Args::parse();
-    let tool_dir = std::env::current_exe()?.parent().unwrap().to_path_buf();
-    let config = crate::config::find_config(args.config.as_ref(), &tool_dir)?;
-    let files = collect_files(&args.paths)?;
+    let mut config = load_config(args.config.as_ref())?;
+    if let Some(ref level) = args.analysis_level {
+        config.analysis.level = level.clone();
+    }
+    let ignore = build_ignore_matcher(&args);
+    let files = collect_files(&args.paths, &ignore)?;
+
+    if let Some(jobs) = args.jobs {
+        rayon::ThreadPoolBuilder::new().num_threads(jobs).build_global().ok();
+    }
+
+    let config_ref = &config.format;
+    let results: Vec<FormatResult> = files
+        .par_iter()
+        .map(|file_path| {
+            let mut source = SourceFile::load(file_path)?;
+            let diags = formatter::format_source(&mut source, config_ref)?;
+            Ok((file_path.clone(), source.original, source.content, diags))
+        })
+        .collect();
+
     let mut exit_code = 0u8;
-
-    for file_path in &files {
-        let content = std::fs::read_to_string(file_path)?;
-        let source = crate::common::source::SourceFile::from_string(&content, file_path.clone());
-        let formatted = crate::formatter::format_source(&source, &config);
-
-        if args.check {
-            if content != formatted.content {
-                eprintln!("{}: formatting issues found", file_path.display());
-                exit_code |= 1;
-            }
-        } else if args.diff {
-            let diff = TextDiff::from_lines(&content, &formatted.content);
-            for change in diff.iter_all_changes() {
-                let sign = match change.tag() {
-                    ChangeTag::Delete => "-",
-                    ChangeTag::Insert => "+",
-                    ChangeTag::Equal => " ",
-                };
-                print!("{}{}", sign, change);
-            }
-        } else if args.in_place {
-            if content != formatted.content {
-                std::fs::write(file_path, &formatted.content)?;
-                if !args.quiet {
-                    eprintln!("formatted {}", file_path.display());
-                }
-            }
-        } else {
-            print!("{}", formatted.content);
-        }
+    for result in &results {
+        // --check: compare original vs formatted, exit_code |= 1
+        // --diff: print unified diff via `similar` crate
+        // -i: write back if changed
+        // default: print formatted to stdout
     }
-
-    if exit_code != 0 {
-        std::process::exit(exit_code as i32);
-    }
-    Ok(())
-}
-
-fn collect_files(paths: &[PathBuf]) -> Result<Vec<PathBuf>, Box<dyn std::error::Error>> {
-    let mut files = Vec::new();
-    for path in paths {
-        if path.is_file() {
-            files.push(path.clone());
-        } else if path.is_dir() {
-            for entry in walkdir::WalkDir::new(path) {
-                let entry = entry?;
-                let p = entry.path();
-                if let Some(ext) = p.extension() {
-                    if ext == "c" || ext == "h" {
-                        files.push(p.to_path_buf());
-                    }
-                }
-            }
-        }
-    }
-    Ok(files)
+    // ... checker and analyzer sections
 }
 ```
 
-- [ ] **Step 4: Run tests**
+Key: `format_source` takes `&mut SourceFile`. `SourceFile` has `original` and `content` fields for change tracking. Three mutually exclusive modes: `--check`, `--diff`, `-i`.
+
+- [x] **Step 4: Run tests**
 
 Run: `cargo test --test cli_mode_tests`
 Expected: All PASS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add tools/linter/cclinter/

@@ -5,7 +5,7 @@
 - Create: `tools/linter/cclinter/src/formatter/pointer_style.rs`
 - Test: `tools/linter/cclinter/tests/formatter_tests.rs`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Add to `tests/formatter_tests.rs` (imports assumed from T02):
 
@@ -47,75 +47,50 @@ fn test_double_pointer() {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run: `cargo test --test formatter_tests test_pointer`
 Expected: FAIL.
 
-- [ ] **Step 3: Create `src/formatter/pointer_style.rs`**
+- [x] **Step 3: Create `src/formatter/pointer_style.rs`**
 
 ```rust
 use crate::common::source::SourceFile;
+use crate::common::string_utils::split_outside_strings;
+use crate::config::{FormatConfig, PointerAlignment};
 use regex::Regex;
-use std::path::PathBuf;
+use std::sync::LazyLock;
 
-pub fn fix_pointer_style(source: &SourceFile, alignment: &str) -> SourceFile {
-    let lines: Vec<String> = source
-        .lines
-        .iter()
-        .map(|line| fix_pointer_line(line, alignment))
-        .collect();
-    let content = lines.join("\n");
-    let has_newline = source.content.ends_with('\n');
-    let final_content = if has_newline && !content.is_empty() {
-        format!("{}\n", content)
-    } else {
-        content
-    };
-    SourceFile::from_string(&final_content, source.path.clone())
-}
+const TYPE_KEYWORDS: &str = r"(?i)\b(int|char|void|long|short|float|double|unsigned|signed|const|volatile|static|extern|struct|enum|union|bool|auto|register|restrict|inline|size_t|...|FILE)";
 
-fn fix_pointer_line(line: &str, alignment: &str) -> String {
-    if line.trim_start().starts_with('#') || line.trim_start().starts_with("//") {
-        return line.to_string();
-    }
-    match alignment {
-        "left" => {
-            let re = Regex::new(r"\b(\w+)\s+(\*+)\s+(\w+)").unwrap();
-            re.replace_all(line, |caps: &regex::Captures| {
-                format!("{}{} {}", &caps[1], &caps[2], &caps[3])
-            })
-            .to_string()
-        }
-        "right" => {
-            let re = Regex::new(r"\b(\w+)(\*+)\s+(\w+)").unwrap();
-            re.replace_all(line, |caps: &regex::Captures| {
-                format!("{} {}{}", &caps[1], &caps[2], &caps[3])
-            })
-            .to_string()
-        }
-        _ => line.to_string(),
-    }
+pub fn fix_pointer_style(
+    source: &mut SourceFile,
+    config: &FormatConfig,
+) -> Result<(), Box<dyn std::error::Error>> {
+    // Processes lines, skipping preprocessor/comments/block comments.
+    // Uses split_outside_strings and split_outside_inline_block_comments.
+    // Normalizes pointer declarations to `type* name` first,
+    // then applies left (int* p) or right (int *p) alignment.
+    Ok(())
 }
 ```
 
-- [ ] **Step 4: Register module, update pipeline**
+Key: takes `&mut SourceFile` + `&FormatConfig`. Comprehensive type keyword list. Handles inline block comments.
 
-Add `pub mod pointer_style;` to `src/formatter/mod.rs`. Update `format_source`:
+- [x] **Step 4: Register module, update pipeline**
+
+Add `pub mod pointer_style;` to `src/formatter/mod.rs`. Call in `format_source`:
 
 ```rust
-let source = pointer_style::fix_pointer_style(
-    &source,
-    config.format.pointer_alignment.as_deref().unwrap_or("left"),
-);
+pointer_style::fix_pointer_style(source, config)?;
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cargo test --test formatter_tests`
 Expected: All tests PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tools/linter/cclinter/

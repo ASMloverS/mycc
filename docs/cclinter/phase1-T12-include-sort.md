@@ -63,87 +63,32 @@ Expected: FAIL.
 
 ```rust
 use crate::common::source::SourceFile;
+use crate::config::{FormatConfig, IncludeSorting};
 use regex::Regex;
-use std::path::PathBuf;
+use std::sync::LazyLock;
 
-pub fn fix_include_sort(source: &SourceFile) -> SourceFile {
-    let include_re = Regex::new(r#"^\s*#\s*include\s+([<"])([^>"]+)[>"]"#).unwrap();
-    let mut corresponding: Vec<(String, String)> = vec![];
-    let mut system: Vec<(String, String)> = vec![];
-    let mut project: Vec<(String, String)> = vec![];
-    let mut pre_include: Vec<String> = vec![];
-    let mut post_include: Vec<String> = vec![];
-    let mut in_includes = false;
-    let mut past_includes = false;
-
-    for line in &source.lines {
-        if let Some(caps) = include_re.captures(line) {
-            let delimiter = &caps[1];
-            let header = &caps[2];
-            let entry = (header.to_string(), line.trim().to_string());
-            in_includes = true;
-            if delimiter == "<" {
-                system.push(entry);
-            } else {
-                let stem = source.path.file_stem().unwrap_or_default().to_string_lossy();
-                if header.starts_with(&*stem) {
-                    corresponding.push(entry);
-                } else {
-                    project.push(entry);
-                }
-            }
-        } else if in_includes && line.trim().is_empty() && !past_includes {
-            continue;
-        } else if in_includes {
-            past_includes = true;
-            post_include.push(line.clone());
-        } else {
-            pre_include.push(line.clone());
-        }
-    }
-
-    corresponding.sort_by(|a, b| a.0.cmp(&b.0));
-    system.sort_by(|a, b| a.0.cmp(&b.0));
-    project.sort_by(|a, b| a.0.cmp(&b.0));
-
-    let mut result = pre_include;
-    for (_, line) in &corresponding {
-        result.push(line.clone());
-    }
-    if !corresponding.is_empty() && !system.is_empty() {
-        result.push(String::new());
-    }
-    for (_, line) in &system {
-        result.push(line.clone());
-    }
-    if !system.is_empty() && !project.is_empty() {
-        result.push(String::new());
-    }
-    for (_, line) in &project {
-        result.push(line.clone());
-    }
-    if !post_include.is_empty() {
-        result.push(String::new());
-        result.extend(post_include);
-    }
-
-    let content = result.join("\n");
-    let has_newline = source.content.ends_with('\n');
-    let final_content = if has_newline && !content.is_empty() {
-        format!("{}\n", content)
-    } else {
-        content
-    };
-    SourceFile::from_string(&final_content, source.path.clone())
+pub fn fix_include_sort(
+    source: &mut SourceFile,
+    config: &FormatConfig,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if config.include_sorting == IncludeSorting::Disabled { return Ok(()); }
+    // Three groups: corresponding (matching file stem), system (<...>), project ("...")
+    // Skips sorting if conditional PP directives (#if, #ifdef, etc.) found in include block.
+    // Skips if non-include, non-blank lines found between first and last include.
+    // Each group sorted alphabetically by header path.
+    // Blank line separator between groups.
+    Ok(())
 }
 ```
 
+Key: takes `&mut SourceFile` + `&FormatConfig`. Three groups: corresponding header → system → project. Skips if conditional PP directives present. Uses file stem matching for "corresponding" group.
+
 - [x] **Step 4: Register module, update pipeline**
 
-Add `pub mod include_sort;` to `src/formatter/mod.rs`. Update `format_source`:
+Add `pub mod include_sort;` to `src/formatter/mod.rs`. Call in `format_source`:
 
 ```rust
-let source = include_sort::fix_include_sort(&source);
+include_sort::fix_include_sort(source, config)?;
 ```
 
 - [x] **Step 5: Run tests**

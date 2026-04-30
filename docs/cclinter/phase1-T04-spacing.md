@@ -5,7 +5,7 @@
 - Create: `tools/linter/cclinter/src/formatter/spacing.rs`
 - Test: `tools/linter/cclinter/tests/formatter_tests.rs`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 Add to `tests/formatter_tests.rs` (imports assumed from T02):
 
@@ -37,76 +37,53 @@ fn test_no_space_in_for() {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run: `cargo test --test formatter_tests test_binary_operators test_comma_spacing test_no_space_in_for`
 Expected: FAIL — `fix_spacing` does not exist.
 
-- [ ] **Step 3: Create `src/formatter/spacing.rs`**
+- [x] **Step 3: Create `src/formatter/spacing.rs`**
 
 ```rust
 use crate::common::source::SourceFile;
+use crate::common::string_utils::split_outside_strings;
+use crate::config::FormatConfig;
 use regex::Regex;
-use std::path::PathBuf;
+use std::sync::LazyLock;
 
-pub fn fix_spacing(source: &SourceFile, spaces_around_ops: bool) -> SourceFile {
-    let mut content = source.content.clone();
-    if spaces_around_ops {
-        let lines: Vec<String> = content.lines().map(|line| {
-            let result = process_line_spacing(line);
-            result
-        }).collect();
-        content = lines.join("\n");
-        if source.content.ends_with('\n') && !content.is_empty() {
-            content.push('\n');
-        }
+pub fn fix_spacing(
+    source: &mut SourceFile,
+    config: &FormatConfig,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if !config.spaces_around_operators && !config.space_before_paren {
+        return Ok(());
     }
-    SourceFile::from_string(&content, source.path.clone())
-}
-
-fn process_line_spacing(line: &str) -> String {
-    let trimmed = line.trim_end();
-    if trimmed.starts_with('#') || trimmed.starts_with("//") {
-        return line.to_string();
-    }
-    let mut result = trimmed.to_string();
-    let binary_ops = ["==", "!=", "<=", ">=", "&&", "||", "<<", ">>", "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^="];
-    for op in &binary_ops {
-        let pattern = format!(r"(?P<before>\S)\s*{}\s*(?P<after>\S)", regex::escape(op));
-        let re = Regex::new(&pattern).unwrap();
-        let replacement = format!("$before {} $after", op);
-        result = re.replace_all(&result, replacement.as_str()).to_string();
-    }
-    let single_ops = ["+", "-", "*", "/", "%", "<", ">", "&", "|", "^", "="];
-    for op in &single_ops {
-        if result.contains("==") || result.contains("!=") || result.contains("<=") || result.contains(">=") {
-            continue;
-        }
-        let pattern = format!(r"(?P<before>\S)\s*{}\s*(?P<after>\S)", regex::escape(op));
-        let re = Regex::new(&pattern).unwrap();
-        let replacement = format!("$before {} $after", op);
-        result = re.replace_all(&result, replacement.as_str()).to_string();
-    }
-    let comma_re = Regex::new(r",\s*").unwrap();
-    result = comma_re.replace_all(&result, ", ").to_string();
-    result
+    // Processes lines using split_outside_strings to skip string literals.
+    // Uses LazyLock static regexes for compound operators (==, !=, +=, etc.)
+    // and single operators (+, -, *, /, etc.).
+    // Handles unary context detection (e.g., -1, *ptr, &addr).
+    // Fixes for-loop semicolons specially.
+    // Optional space_before_paren: `func(` → `func (`.
+    Ok(())
 }
 ```
 
-- [ ] **Step 4: Register module and update pipeline**
+Key: takes `&mut SourceFile` + `&FormatConfig`. Uses `split_outside_strings` to avoid modifying inside string/char literals. `LazyLock` static regexes for performance.
 
-Add `pub mod spacing;` to `src/formatter/mod.rs`. Update `format_source`:
+- [x] **Step 4: Register module and update pipeline**
+
+Add `pub mod spacing;` to `src/formatter/mod.rs`. Call in `format_source`:
 
 ```rust
-let source = spacing::fix_spacing(&source, config.format.spaces_around_operators.unwrap_or(true));
+spacing::fix_spacing(source, config)?;
 ```
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cargo test --test formatter_tests`
 Expected: All tests PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tools/linter/cclinter/

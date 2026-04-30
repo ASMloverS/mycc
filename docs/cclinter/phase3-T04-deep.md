@@ -45,97 +45,36 @@ Expected: FAIL.
 
 ```rust
 use crate::common::diag::{Diagnostic, Severity};
-use crate::common::source::SourceFile;
+use crate::common::source::{mask_string_literals, strip_line_comment, SourceFile};
+use crate::config::AnalysisConfig;
 use regex::Regex;
+use std::collections::HashSet;
+use std::sync::LazyLock;
 
-pub fn check(source: &SourceFile) -> Vec<Diagnostic> {
+pub fn check(source: &SourceFile, _config: &AnalysisConfig) -> Vec<Diagnostic> {
+    let lines = source.lines();
     let mut diags = Vec::new();
-    diags.extend(check_buffer_overflow_patterns(source));
-    diags.extend(check_null_deref_patterns(source));
-    diags
-}
-
-fn check_buffer_overflow_patterns(source: &SourceFile) -> Vec<Diagnostic> {
-    let mut diags = Vec::new();
-    let arr_decl_re = Regex::new(r"\b(\w+)\s*\[\s*(\d+)\s*\]").unwrap();
-    let gets_re = Regex::new(r"\bgets\s*\(").unwrap();
-    let scanf_s_re = Regex::new(r#"scanf\s*\(\s*"%s"\s*,\s*\w+\s*\)"#).unwrap();
-
-    let mut arrays: Vec<(String, usize)> = Vec::new();
-    for (i, line) in source.lines.iter().enumerate() {
-        if let Some(caps) = arr_decl_re.captures(line) {
-            let name = caps[1].to_string();
-            let size: usize = caps[2].parse().unwrap_or(0);
-            arrays.push((name, size));
-        }
-        if gets_re.is_match(line) {
-            diags.push(Diagnostic::new_with_source(
-                source.path.to_string_lossy().to_string(),
-                i + 1, 1,
-                Severity::Error,
-                "bugprone-buffer-overflow-risk",
-                "gets() has no bounds checking — use fgets() instead",
-                line,
-            ));
-        }
-        if scanf_s_re.is_match(line) {
-            diags.push(Diagnostic::new_with_source(
-                source.path.to_string_lossy().to_string(),
-                i + 1, 1,
-                Severity::Warning,
-                "bugprone-buffer-overflow-risk",
-                "scanf(\"%s\", ...) has no bounds checking",
-                line,
-            ));
-        }
-        for (arr_name, _arr_size) in &arrays {
-            let idx_re = Regex::new(&format!(r"\b{}\s*\[\s*\w+\s*\]", regex::escape(arr_name))).unwrap();
-            if idx_re.is_match(line) && !line.contains("if") && !line.contains("<") && !line.contains(">") && !line.contains("sizeof") {
-                diags.push(Diagnostic::new_with_source(
-                    source.path.to_string_lossy().to_string(),
-                    i + 1, 1,
-                    Severity::Warning,
-                    "bugprone-buffer-overflow-risk",
-                    &format!("Array '{}' access without bounds check", arr_name),
-                    line,
-                ));
-            }
-        }
-    }
-    diags
-}
-
-fn check_null_deref_patterns(source: &SourceFile) -> Vec<Diagnostic> {
-    let mut diags = Vec::new();
-    let null_init_re = Regex::new(r"\b(\w+)\s*\*\s*(\w+)\s*=\s*NULL\s*;").unwrap();
-    let deref_re = Regex::new(r"\*\s*(\w+)\s*=").unwrap();
-    let mut null_ptrs: Vec<String> = Vec::new();
-    for (i, line) in source.lines.iter().enumerate() {
-        if let Some(caps) = null_init_re.captures(line) {
-            null_ptrs.push(caps[2].to_string());
-        }
-        if let Some(caps) = deref_re.captures(line) {
-            let ptr_name = &caps[1];
-            if null_ptrs.contains(&ptr_name.to_string()) {
-                let has_null_check = source.lines[..i].iter().rev().take(5).any(|l| {
-                    l.contains("if") && l.contains(ptr_name) && (l.contains("NULL") || l.contains("null"))
-                });
-                if !has_null_check {
-                    diags.push(Diagnostic::new_with_source(
-                        source.path.to_string_lossy().to_string(),
-                        i + 1, 1,
-                        Severity::Warning,
-                        "bugprone-null-deref-risk",
-                        &format!("Potential null pointer dereference: *{}", ptr_name),
-                        line,
-                    ));
-                }
-            }
-        }
-    }
+    diags.extend(check_buffer_overflow_patterns(&lines, source));
+    diags.extend(check_null_deref_patterns(&lines, source));
     diags
 }
 ```
+
+Two rule groups:
+
+1. **`bugprone-buffer-overflow-risk`** — Three sub-checks:
+   - `gets()` usage (severity: Error)
+   - `scanf("%s", ...)` without bounds (severity: Warning)
+   - Array access without bounds check: collects array declarations, detects `arr[var_index]` without nearby comparison or `sizeof`
+
+2. **`bugprone-null-deref-risk`** — Detects `*ptr` dereference where `ptr` was initialized to `NULL`:
+   - Tracks `NULL_PTR_INIT_RE` declarations
+   - Uses `mask_string_literals` to avoid false positives
+   - `is_deref_context` distinguishes `*ptr` dereference from pointer declarations
+   - Looks back `NULL_CHECK_LOOKBACK=5` lines for null checks (`if` + ptr name)
+   - Function-scoped: clears null ptrs at function boundaries (brace depth transitions)
+
+Key: takes `(source, _config: &AnalysisConfig)`. Uses `mask_string_literals` from `source.rs`. Buffer overflow checks use regex-based bounds detection.
 
 - [x] **Step 4: Run tests**
 

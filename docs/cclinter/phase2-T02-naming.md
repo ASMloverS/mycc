@@ -39,77 +39,54 @@ fn test_pascal_type() {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run: `cargo test --test checker_tests`
 Expected: FAIL.
 
-- [ ] **Step 3: Create `src/checker/naming.rs`**
+- [x] **Step 3: Create `src/checker/naming.rs`**
 
 ```rust
 use crate::common::diag::{Diagnostic, Severity};
 use crate::common::source::SourceFile;
 use regex::Regex;
+use std::sync::LazyLock;
+
+static SNAKE_CASE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-z][a-z0-9_]*$").unwrap());
+static UPPER_SNAKE_CASE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[A-Z][A-Z0-9_]*$").unwrap());
+static PASCAL_CASE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[A-Z][a-zA-Z0-9]*$").unwrap());
+static CAMEL_CASE_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"^[a-z][a-zA-Z0-9]*$").unwrap());
+
+// Separate regexes per kind: FUNCTION_RE, MACRO_RE, VARIABLE_RE, TYPE_RE, CONSTANT_RE
 
 pub fn check_naming(source: &SourceFile, style: &str, kind: &str) -> Vec<Diagnostic> {
-    let mut diags = Vec::new();
     let pattern_re = naming_regex(style);
-    let (search_re, extractor): (Regex, Box<dyn Fn(&regex::Captures) -> String>) = match kind {
-        "function" => {
-            let re = Regex::new(r"^\s*(?:void|int|char|float|double|long|short|unsigned|static|extern|const|\w+_t)\s+\*?\s*(\w+)\s*\(").unwrap();
-            (re, Box::new(|caps: &regex::Captures| caps[1].to_string()))
-        }
-        "macro" => {
-            let re = Regex::new(r"#define\s+(\w+)").unwrap();
-            (re, Box::new(|caps: &regex::Captures| caps[1].to_string()))
-        }
-        "variable" => {
-            let re = Regex::new(r"\b(?:int|char|float|double|long|void|unsigned|static|\w+_t)\s+\*?\s*(\w+)\s*[;=]").unwrap();
-            (re, Box::new(|caps: &regex::Captures| caps[1].to_string()))
-        }
-        _ => return diags,
+    let search_re: &LazyLock<Regex> = match kind {
+        "function" => &FUNCTION_RE,
+        "macro" => &MACRO_RE,
+        "variable" => &VARIABLE_RE,
+        "type" => &TYPE_RE,
+        "constant" => &CONSTANT_RE,
+        _ => return vec![],
     };
-
-    for (line_num, line) in source.lines.iter().enumerate() {
-        for caps in search_re.captures_iter(line) {
-            let name = extractor(&caps);
-            if !pattern_re.is_match(&name) {
-                diags.push(Diagnostic::new_with_source(
-                    source.path.to_string_lossy().to_string(),
-                    line_num + 1,
-                    1,
-                    Severity::Warning,
-                    &format!("readability-naming-{}", kind),
-                    &format!("{} '{}' does not follow {} convention", kind, name, style),
-                    line,
-                ));
-            }
-        }
-    }
-    diags
+    for (line_num, line) in source.lines().iter().enumerate() { ... }
 }
 
-fn naming_regex(style: &str) -> Regex {
-    match style {
-        "snake_case" => Regex::new(r"^[a-z][a-z0-9_]*$").unwrap(),
-        "upper_snake_case" => Regex::new(r"^[A-Z][A-Z0-9_]*$").unwrap(),
-        "pascal_case" => Regex::new(r"^[A-Z][a-zA-Z0-9]*$").unwrap(),
-        "camelCase" => Regex::new(r"^[a-z][a-zA-Z0-9]*$").unwrap(),
-        _ => Regex::new(r".*").unwrap(),
-    }
-}
+fn naming_regex(style: &str) -> &'static LazyLock<Regex> { ... }
 ```
 
-- [ ] **Step 4: Register module**
+Key: uses `source.lines()` method (returns `Vec<&str>`), not `source.lines` field. Regexes are `LazyLock<Regex>` statics. Supports 5 kinds: function, macro, variable, type, constant. Rule IDs: `readability-naming-{kind}`.
+
+- [x] **Step 4: Register module**
 
 Add `pub mod naming;` to `src/checker/mod.rs`.
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cargo test --test checker_tests`
 Expected: All PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tools/linter/cclinter/

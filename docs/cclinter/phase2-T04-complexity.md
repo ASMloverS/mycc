@@ -5,7 +5,7 @@
 - Modify: `tools/linter/cclinter/src/checker/mod.rs`
 - Test: `tests/checker_tests.rs`
 
-- [ ] **Step 1: Write failing tests**
+- [x] **Step 1: Write failing tests**
 
 ```rust
 use cclinter::checker::complexity::check_complexity;
@@ -37,96 +37,42 @@ fn test_deep_nesting() {
 }
 ```
 
-- [ ] **Step 2: Run tests to verify failure**
+- [x] **Step 2: Run tests to verify failure**
 
 Run: `cargo test --test checker_tests test_function_too_long test_file_too_long test_deep_nesting`
 Expected: FAIL.
 
-- [ ] **Step 3: Create `src/checker/complexity.rs`**
+- [x] **Step 3: Create `src/checker/complexity.rs`**
 
 ```rust
 use crate::common::diag::{Diagnostic, Severity};
 use crate::common::source::SourceFile;
+use crate::config::ComplexityConfig;
+use regex::Regex;
+use std::sync::LazyLock;
 
-pub fn check_complexity(source: &SourceFile, max_fn_lines: usize, max_file_lines: usize, max_nesting: usize) -> Vec<Diagnostic> {
-    let mut diags = Vec::new();
-    if source.lines.len() > max_file_lines {
-        diags.push(Diagnostic::new(
-            source.path.to_string_lossy().to_string(),
-            1, 1,
-            Severity::Warning,
-            "readability-file-size",
-            &format!("File has {} lines (max {})", source.lines.len(), max_file_lines),
-        ));
-    }
-    diags.extend(check_function_lengths(source, max_fn_lines));
-    diags.extend(check_nesting_depth(source, max_nesting));
-    diags
-}
-
-fn check_function_lengths(source: &SourceFile, max_lines: usize) -> Vec<Diagnostic> {
-    let mut diags = Vec::new();
-    let mut fn_start = None;
-    let mut brace_depth = 0i32;
-    let fn_re = regex::Regex::new(r"^\s*\w+\s+\*?\s*\w+\s*\(").unwrap();
-    for (i, line) in source.lines.iter().enumerate() {
-        let trimmed = line.trim();
-        if fn_start.is_none() && fn_re.is_match(trimmed) && trimmed.contains('{') {
-            fn_start = Some(i);
-            brace_depth = trimmed.matches('{').count() as i32 - trimmed.matches('}').count() as i32;
-            continue;
-        }
-        if let Some(start) = fn_start {
-            brace_depth += trimmed.matches('{').count() as i32;
-            brace_depth -= trimmed.matches('}').count() as i32;
-            if brace_depth <= 0 {
-                let len = i - start;
-                if len > max_lines {
-                    diags.push(Diagnostic::new(
-                        source.path.to_string_lossy().to_string(),
-                        start + 1, 1,
-                        Severity::Warning,
-                        "readability-function-size",
-                        &format!("Function spans {} lines (max {})", len, max_lines),
-                    ));
-                }
-                fn_start = None;
-            }
-        }
-    }
-    diags
-}
-
-fn check_nesting_depth(source: &SourceFile, max_depth: usize) -> Vec<Diagnostic> {
-    let mut diags = Vec::new();
-    let mut depth = 0usize;
-    for (i, line) in source.lines.iter().enumerate() {
-        depth += line.matches('{').count();
-        if depth > max_depth {
-            diags.push(Diagnostic::new(
-                source.path.to_string_lossy().to_string(),
-                i + 1, 1,
-                Severity::Warning,
-                "readability-deep-nesting",
-                &format!("Nesting depth {} exceeds max {}", depth, max_depth),
-            ));
-        }
-        depth = depth.saturating_sub(line.matches('}').count());
-    }
-    diags
+pub fn check_complexity(source: &SourceFile, config: &ComplexityConfig) -> Vec<Diagnostic> {
+    // 1. File line count check: readability-file-size
+    // 2. Function length check: readability-function-size
+    //    - Tracks pending signatures (fn signature on one line, { on next)
+    //    - Handles single-line functions { ... }
+    // 3. Nesting depth check: readability-deep-nesting
+    //    - Only emits first occurrence (was_over tracking)
 }
 ```
 
-- [ ] **Step 4: Register module**
+Key: takes `&ComplexityConfig` (not individual params). Uses `source.lines()` method. Handles pending signatures (function header + `{` on separate line). Nesting check uses `saturating_sub` and emits only once per nesting violation region.
+
+- [x] **Step 4: Register module**
 
 Add `pub mod complexity;` to `src/checker/mod.rs`.
 
-- [ ] **Step 5: Run tests**
+- [x] **Step 5: Run tests**
 
 Run: `cargo test --test checker_tests`
 Expected: All PASS.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tools/linter/cclinter/

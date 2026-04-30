@@ -42,48 +42,36 @@ fn test_indent_preserves_leading_spaces() {
 Run: `cargo test --test formatter_tests test_tab_to_spaces test_nested_indent test_indent_preserves_leading_spaces`
 Expected: FAIL — `fix_indent` does not exist.
 
-- [ ] **Step 3: Create `src/formatter/indent.rs`**
+- [x] **Step 3: Create `src/formatter/indent.rs`**
 
 ```rust
 use crate::common::source::SourceFile;
-use std::path::PathBuf;
+use crate::common::string_utils::split_outside_strings;
+use crate::config::FormatConfig;
 
-pub fn fix_indent(source: &SourceFile, indent_width: usize) -> SourceFile {
-    let lines: Vec<String> = source
-        .lines
-        .iter()
-        .map(|line| {
-            let leading_tabs: usize = line.chars().take_while(|&c| c == '\t').count();
-            if leading_tabs == 0 {
-                return line.clone();
-            }
-            let rest = &line[leading_tabs..];
-            let spaces = " ".repeat(leading_tabs * indent_width);
-            format!("{}{}", spaces, rest)
-        })
-        .collect();
-    let content = lines.join("\n");
-    let has_newline = source.content.ends_with('\n');
-    let final_content = if has_newline && !content.is_empty() {
-        format!("{}\n", content)
-    } else {
-        content
-    };
-    SourceFile::from_string(&final_content, source.path.clone())
+pub fn fix_indent(
+    source: &mut SourceFile,
+    config: &FormatConfig,
+) -> Result<(), Box<dyn std::error::Error>> {
+    if config.use_tabs { return Ok(()); }
+    let indent_width = config.indent_width;
+    // ...
+    // Tracks brace depth and paren depth for indentation.
+    // Uses split_outside_strings to avoid counting braces inside string literals.
+    // Handles block comments, preprocessor directives (skip).
+    // Extra indent when inside paren expressions.
+    Ok(())
 }
 ```
 
-- [ ] **Step 4: Register module and update pipeline**
+Key: takes `&mut SourceFile` + `&FormatConfig`, not individual params.
 
-Add `pub mod indent;` to `src/formatter/mod.rs`. Update `format_source`:
+- [x] **Step 4: Register module and update pipeline**
+
+Add `pub mod indent;` to `src/formatter/mod.rs`. Call in `format_source`:
 
 ```rust
-pub fn format_source(source: &SourceFile, config: &crate::config::Config) -> SourceFile {
-    let source = encoding::fix_encoding(source);
-    let indent = config.format.indent_width.unwrap_or(2);
-    let source = indent::fix_indent(&source, indent);
-    source
-}
+indent::fix_indent(source, config)?;
 ```
 
 - [ ] **Step 5: Run tests**

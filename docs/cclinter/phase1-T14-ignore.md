@@ -46,7 +46,7 @@ Expected: FAIL.
 
 ```rust
 use globset::{Glob, GlobSet, GlobSetBuilder};
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 pub struct IgnoreMatcher {
     set: GlobSet,
@@ -54,52 +54,41 @@ pub struct IgnoreMatcher {
 
 impl IgnoreMatcher {
     pub fn from_patterns(patterns: &[String]) -> Self {
-        let mut builder = GlobSetBuilder::new();
-        for pat in patterns {
-            if let Ok(glob) = Glob::new(pat) {
-                let _ = builder.add(glob);
-            }
-        }
-        let set = builder.build().unwrap_or_else(|_| GlobSet::empty());
-        Self { set }
+        // Expands patterns: root-only (/prefix), directory (/suffix),
+        // simple names → **/name/** + **/name
     }
-
-    pub fn from_string(content: &str) -> Self {
-        let patterns: Vec<String> = content
-            .lines()
-            .map(|l| l.trim())
-            .filter(|l| !l.is_empty() && !l.starts_with('#'))
-            .map(|l| l.to_string())
-            .collect();
-        Self::from_patterns(&patterns)
-    }
-
-    pub fn from_file(path: &Path) -> Self {
-        let content = std::fs::read_to_string(path).unwrap_or_default();
-        Self::from_string(&content)
-    }
-
-    pub fn is_ignored(&self, path: &Path) -> bool {
-        let path_str = path.to_string_lossy();
-        self.set.is_match(path_str.as_ref())
-    }
+    pub fn from_string(content: &str) -> Self { ... }
+    pub fn from_file(path: &Path) -> Self { ... }
+    pub fn is_ignored(&self, path: &Path) -> bool { ... }
+    pub fn is_empty(&self) -> bool { ... }
 }
 ```
 
+Pattern expansion rules:
+- `/` prefix → root-only match
+- `/` suffix or directory name → `{pat}/**`
+- Simple name (no glob, no separator) → `**/{pat}/**` + `**/{pat}`
+- Negation (`!`) patterns → warning, skipped
+
 - [x] **Step 4: Update `src/cli.rs` to use ignore**
 
-In the `run()` function, after collecting files, add ignore filtering:
+In `cli.rs`, `build_ignore_matcher` combines `--exclude` patterns with `.cclinterignore` patterns:
 
 ```rust
-let ignore_path = tool_dir.join(".cclinterignore");
-let matcher = crate::ignore::IgnoreMatcher::from_file(&ignore_path);
-let files: Vec<PathBuf> = collected_files
-    .into_iter()
-    .filter(|f| !matcher.is_ignored(f))
-    .collect();
+fn build_ignore_matcher(args: &Args) -> crate::ignore::IgnoreMatcher {
+    let mut patterns: Vec<String> = args.exclude.clone();
+    let ignore_path = std::path::Path::new(".cclinterignore");
+    if ignore_path.exists() {
+        if let Ok(content) = std::fs::read_to_string(ignore_path) {
+            // Filter: skip empty, comments, negation patterns
+            patterns.extend(file_patterns);
+        }
+    }
+    crate::ignore::IgnoreMatcher::from_patterns(&patterns)
+}
 ```
 
-(Exact integration depends on file collection logic from T01.)
+File collection uses `walkdir` to recursively find `.c` and `.h` files, filtered by `IgnoreMatcher`.
 
 - [x] **Step 5: Run tests**
 
