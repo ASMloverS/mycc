@@ -112,19 +112,22 @@ fn test_nested_indent() {
 }
 
 #[test]
-fn test_no_tabs_unchanged() {
-    let mut src = SourceFile::from_string("int x;\n    int y;\n", PathBuf::from("test.c"));
+fn test_spaces_reindented_by_brace_depth() {
+    let mut src = SourceFile::from_string(
+        "void f() {\n    int y;\n}\n",
+        PathBuf::from("test.c"),
+    );
     fix_indent(&mut src, &FormatConfig::default()).unwrap();
-    assert_eq!(src.content, "int x;\n    int y;\n");
+    assert_eq!(src.content, "void f() {\n  int y;\n}\n");
 }
 
 #[test]
 fn test_custom_indent_width() {
     let mut config = FormatConfig::default();
     config.indent_width = 4;
-    let mut src = SourceFile::from_string("\tint x;\n", PathBuf::from("test.c"));
+    let mut src = SourceFile::from_string("void f() {\n\tint x;\n}\n", PathBuf::from("test.c"));
     fix_indent(&mut src, &config).unwrap();
-    assert_eq!(src.content, "    int x;\n");
+    assert_eq!(src.content, "void f() {\n    int x;\n}\n");
 }
 
 #[test]
@@ -136,30 +139,30 @@ fn test_indent_empty_input() {
 
 #[test]
 fn test_indent_tab_only_line() {
-    let mut src = SourceFile::from_string("\t\t\n", PathBuf::from("test.c"));
+    let mut src = SourceFile::from_string("void f() {\n\t\t\n}\n", PathBuf::from("test.c"));
     fix_indent(&mut src, &FormatConfig::default()).unwrap();
-    assert_eq!(src.content, "    \n");
+    assert_eq!(src.content, "void f() {\n\n}\n");
 }
 
 #[test]
 fn test_indent_no_trailing_newline() {
-    let mut src = SourceFile::from_string("\tint x;", PathBuf::from("test.c"));
+    let mut src = SourceFile::from_string("void f() {\n\tint x;\n}", PathBuf::from("test.c"));
     fix_indent(&mut src, &FormatConfig::default()).unwrap();
-    assert_eq!(src.content, "  int x;");
+    assert_eq!(src.content, "void f() {\n  int x;\n}");
 }
 
 #[test]
-fn test_indent_space_before_tab_unchanged() {
-    let mut src = SourceFile::from_string(" \tcode\n", PathBuf::from("test.c"));
+fn test_indent_mixed_whitespace_reindented() {
+    let mut src = SourceFile::from_string("void f() {\n \tcode\n}\n", PathBuf::from("test.c"));
     fix_indent(&mut src, &FormatConfig::default()).unwrap();
-    assert_eq!(src.content, " \tcode\n");
+    assert_eq!(src.content, "void f() {\n  code\n}\n");
 }
 
 #[test]
 fn test_indent_tab_then_space() {
-    let mut src = SourceFile::from_string("\t code\n", PathBuf::from("test.c"));
+    let mut src = SourceFile::from_string("void f() {\n\t code\n}\n", PathBuf::from("test.c"));
     fix_indent(&mut src, &FormatConfig::default()).unwrap();
-    assert_eq!(src.content, "   code\n");
+    assert_eq!(src.content, "void f() {\n  code\n}\n");
 }
 
 #[test]
@@ -1481,6 +1484,81 @@ fn test_wrap_preserves_indent() {
             line
         );
     }
+}
+
+#[test]
+fn test_merge_continuations_fits_limit() {
+    let input = "int x = func(a,\n    b, c);\n";
+    let mut config = FormatConfig::default();
+    config.column_limit = 80;
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_line_length(&mut src, &config).unwrap();
+    assert_eq!(src.content, "int x = func(a, b, c);\n");
+}
+
+#[test]
+fn test_merge_continuations_still_wraps() {
+    let input = "int x = very_long_func(arg1,\n    arg2, arg3, arg4, arg5, arg6, arg7, arg8, arg9, arg10);\n";
+    let mut config = FormatConfig::default();
+    config.column_limit = 40;
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_line_length(&mut src, &config).unwrap();
+    for line in src.content.lines() {
+        assert!(
+            line.chars().count() <= 40,
+            "Line too long: {} (len={})",
+            line,
+            line.chars().count()
+        );
+    }
+    assert!(
+        src.content.lines().count() > 1,
+        "Should have wrapped"
+    );
+}
+
+#[test]
+fn test_merge_preserves_preprocessor() {
+    let input = "#define FOO \\\n    bar\n";
+    let mut config = FormatConfig::default();
+    config.column_limit = 80;
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_line_length(&mut src, &config).unwrap();
+    assert_eq!(src.content, input);
+}
+
+#[test]
+fn test_merge_preserves_block_comment() {
+    let input = "int x = func(a, /* comment\n    still comment */\n    b);\n";
+    let mut config = FormatConfig::default();
+    config.column_limit = 80;
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_line_length(&mut src, &config).unwrap();
+    assert!(
+        src.content.contains("/* comment\n    still comment */"),
+        "Block comment should be preserved, got: {}",
+        src.content
+    );
+}
+
+#[test]
+fn test_merge_does_not_cross_semicolon() {
+    let input = "int x = 0;\n    int y = 1;\n";
+    let mut config = FormatConfig::default();
+    config.column_limit = 80;
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_line_length(&mut src, &config).unwrap();
+    assert_eq!(src.content, input);
+}
+
+#[test]
+fn test_merge_does_not_cross_close_paren() {
+    let input = "if (cond)\n    stmt;\n";
+    let mut config = FormatConfig::default();
+    config.column_limit = 80;
+    let mut src = SourceFile::from_string(input, PathBuf::from("test.c"));
+    fix_line_length(&mut src, &config).unwrap();
+    assert_eq!(src.content, input);
 }
 
 #[test]
