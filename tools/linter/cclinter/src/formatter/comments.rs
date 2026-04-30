@@ -123,9 +123,7 @@ fn convert_block_body(body: &str) -> String {
 
 fn strip_comment_prefix(line: &str) -> &str {
     let trimmed = line.trim_start();
-    if trimmed.starts_with("* ") {
-        &trimmed[2..]
-    } else if trimmed.starts_with("*\t") {
+    if trimmed.starts_with("* ") || trimmed.starts_with("*\t") {
         &trimmed[2..]
     } else if trimmed == "*" {
         ""

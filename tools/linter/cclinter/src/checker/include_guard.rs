@@ -28,7 +28,7 @@ pub fn check_include_guard(source: &SourceFile, config: &IncludeGuardConfig) -> 
             let header = caps[1].to_string();
             if seen.contains(&header) {
                 diags.push(Diagnostic::new_with_source(
-                    source.path.to_string_lossy().to_string(),
+                    source.display_path(),
                     line_num + 1,
                     1,
                     Severity::Warning,
@@ -50,7 +50,7 @@ pub fn check_include_guard(source: &SourceFile, config: &IncludeGuardConfig) -> 
         };
         if !has_guard {
             diags.push(Diagnostic::new(
-                source.path.to_string_lossy().to_string(),
+                source.display_path(),
                 1,
                 1,
                 Severity::Warning,

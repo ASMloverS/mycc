@@ -196,13 +196,14 @@ fn apply_operator_spacing(input: &str) -> String {
     result
 }
 
+const COMPOUND_OPS: &[&str] = &[
+    "++", "--", "<<=", ">>=", "==", "!=", "<=", ">=", "&&", "||", "<<", ">>",
+    "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=",
+];
+
 fn is_substring_of_compound_op(full: &str, op: &str) -> bool {
-    let compound_ops: &[&str] = &[
-        "++", "--", "->", "<<=", ">>=", "==", "!=", "<=", ">=", "&&", "||", "<<", ">>",
-        "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=",
-    ];
-    for cop in compound_ops {
-        if full.contains(cop) && *cop != op && cop.contains(op) {
+    for cop in COMPOUND_OPS.iter().copied().chain(std::iter::once("->")) {
+        if full.contains(cop) && cop != op && cop.contains(op) {
             return true;
         }
     }
@@ -210,12 +211,8 @@ fn is_substring_of_compound_op(full: &str, op: &str) -> bool {
 }
 
 fn is_part_of_longer_compound_op(full: &str, op: &str) -> bool {
-    let all_ops: &[&str] = &[
-        "++", "--", "<<=", ">>=", "==", "!=", "<=", ">=", "&&", "||", "<<", ">>",
-        "+=", "-=", "*=", "/=", "%=", "&=", "|=", "^=",
-    ];
-    for lop in all_ops {
-        if lop.len() > op.len() && full.contains(lop) && lop.contains(op) {
+    for lop in COMPOUND_OPS {
+        if lop.len() > op.len() && full.contains(*lop) && lop.contains(op) {
             return true;
         }
     }

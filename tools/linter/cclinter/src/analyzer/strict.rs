@@ -42,7 +42,7 @@ fn check_resource_leaks(lines: &[&str], source: &SourceFile) -> Vec<Diagnostic> 
     let mut fn_alloc_vars: HashSet<String> = HashSet::new();
     let mut fn_returns_alloc = false;
     let mut in_fn = false;
-    let path_str = source.path.to_string_lossy().to_string();
+    let path_str = source.display_path();
     for (i, line) in lines.iter().enumerate() {
         let code = strip_line_comment(line);
         let opens = code.matches('{').count() as i32;
@@ -93,7 +93,7 @@ fn check_resource_leaks(lines: &[&str], source: &SourceFile) -> Vec<Diagnostic> 
 }
 
 fn check_dead_branches(lines: &[&str], source: &SourceFile) -> Vec<Diagnostic> {
-    let path_str = source.path.to_string_lossy().to_string();
+    let path_str = source.display_path();
     let mut diags = Vec::new();
     for (i, line) in lines.iter().enumerate() {
         let code = strip_line_comment(line);
@@ -123,7 +123,7 @@ fn check_dead_branches(lines: &[&str], source: &SourceFile) -> Vec<Diagnostic> {
 }
 
 fn check_suspicious_casts(lines: &[&str], source: &SourceFile) -> Vec<Diagnostic> {
-    let path_str = source.path.to_string_lossy().to_string();
+    let path_str = source.display_path();
     let mut diags = Vec::new();
     let mut ptr_vars: HashSet<String> = HashSet::new();
     for line in lines.iter() {

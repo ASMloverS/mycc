@@ -1,5 +1,5 @@
 use crate::common::diag::{Diagnostic, Severity};
-use crate::common::source::SourceFile;
+use crate::common::source::{mask_code_line, SourceFile};
 use regex::Regex;
 use std::collections::{HashMap, HashSet};
 use std::sync::LazyLock;
@@ -19,13 +19,6 @@ static FUNC_SIG_RE: LazyLock<Regex> = LazyLock::new(|| {
 static CALL_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"\b(\w+)\s*\(").unwrap());
 
-static STRING_CHAR_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#""(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'"#).unwrap()
-});
-
-static BLOCK_COMMENT_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"/\*.*?\*/").unwrap());
-
 static C_KEYWORDS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     HashSet::from([
         "if", "else", "for", "while", "do", "switch", "case", "default",
@@ -34,25 +27,13 @@ static C_KEYWORDS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     ])
 });
 
-fn mask_exclusions(line: &str) -> String {
-    let s = STRING_CHAR_RE
-        .replace_all(line, |caps: &regex::Captures| {
-            " ".repeat(caps[0].len())
-        });
-    BLOCK_COMMENT_RE
-        .replace_all(&s, |caps: &regex::Captures| {
-            " ".repeat(caps[0].len())
-        })
-        .into_owned()
-}
-
 fn is_keyword(name: &str) -> bool {
     C_KEYWORDS.contains(name)
 }
 
 pub fn check_forward_decl(source: &SourceFile) -> Vec<Diagnostic> {
     let lines = source.lines();
-    let masked_lines: Vec<String> = lines.iter().map(|l| mask_exclusions(l)).collect();
+    let masked_lines: Vec<String> = lines.iter().map(|l| mask_code_line(l)).collect();
     let mut forward_decls: HashMap<String, usize> = HashMap::new();
     let mut func_defs: HashMap<String, usize> = HashMap::new();
     let mut pending_sig: Option<(String, usize)> = None;
@@ -115,7 +96,7 @@ pub fn check_forward_decl(source: &SourceFile) -> Vec<Diagnostic> {
                 (None, Some(&def_i)) if def_i > i => {
                     reported.insert(name.clone());
                     diags.push(Diagnostic::new_with_source(
-                        source.path.to_string_lossy().to_string(),
+                        source.display_path(),
                         i + 1,
                         1,
                         Severity::Warning,

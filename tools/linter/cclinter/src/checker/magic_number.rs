@@ -1,5 +1,5 @@
 use crate::common::diag::{Diagnostic, Severity};
-use crate::common::source::SourceFile;
+use crate::common::source::{mask_code_line, SourceFile};
 use crate::config::MagicNumberConfig;
 use regex::Regex;
 use std::collections::HashSet;
@@ -8,13 +8,6 @@ use std::sync::LazyLock;
 static NUM_RE: LazyLock<Regex> = LazyLock::new(|| {
     Regex::new(r"\b(\d+)([uUlL]*)\b").unwrap()
 });
-
-static STRING_CHAR_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#""(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'"#).unwrap()
-});
-
-static BLOCK_COMMENT_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"/\*.*?\*/").unwrap());
 
 pub fn check_magic_number(
     source: &SourceFile,
@@ -32,7 +25,7 @@ pub fn check_magic_number(
             continue;
         }
         let prefix_len = line.len() - line.trim_start().len();
-        let masked = mask_exclusions(trimmed);
+        let masked = mask_code_line(trimmed);
         let code = match masked.find("//") {
             Some(pos) => &masked[..pos],
             None => masked.as_ref(),
@@ -59,7 +52,7 @@ pub fn check_magic_number(
             };
             if !allowed.contains(&val) {
                 diags.push(Diagnostic::new_with_source(
-                    source.path.to_string_lossy().to_string(),
+                    source.display_path(),
                     i + 1,
                     col + 1 + prefix_len,
                     Severity::Warning,
@@ -71,18 +64,6 @@ pub fn check_magic_number(
         }
     }
     diags
-}
-
-fn mask_exclusions(line: &str) -> String {
-    let s = STRING_CHAR_RE
-        .replace_all(line, |caps: &regex::Captures| {
-            " ".repeat(caps[0].len())
-        });
-    BLOCK_COMMENT_RE
-        .replace_all(&s, |caps: &regex::Captures| {
-            " ".repeat(caps[0].len())
-        })
-        .into_owned()
 }
 
 fn should_skip_line(line: &str) -> bool {

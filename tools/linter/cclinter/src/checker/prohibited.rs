@@ -1,8 +1,7 @@
 use crate::common::diag::{Diagnostic, Severity};
-use crate::common::source::SourceFile;
+use crate::common::source::{mask_code_line, SourceFile};
 use regex::Regex;
 use std::collections::HashSet;
-use std::sync::LazyLock;
 
 const DEFAULT_PROHIBITED: &[&str] = &[
     "strcpy",
@@ -12,25 +11,6 @@ const DEFAULT_PROHIBITED: &[&str] = &[
     "gets",
     "scanf",
 ];
-
-static STRING_CHAR_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#""(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'"#).unwrap()
-});
-
-static BLOCK_COMMENT_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"/\*.*?\*/").unwrap());
-
-fn mask_exclusions(line: &str) -> String {
-    let s = STRING_CHAR_RE
-        .replace_all(line, |caps: &regex::Captures| {
-            " ".repeat(caps[0].len())
-        });
-    BLOCK_COMMENT_RE
-        .replace_all(&s, |caps: &regex::Captures| {
-            " ".repeat(caps[0].len())
-        })
-        .into_owned()
-}
 
 pub fn check_prohibited(
     source: &SourceFile,
@@ -68,11 +48,11 @@ pub fn check_prohibited(
         if trimmed.starts_with('#') || trimmed.starts_with("//") {
             continue;
         }
-        let masked = mask_exclusions(line);
+        let masked = mask_code_line(line);
         for (fn_name, re) in &patterns {
             if re.is_match(&masked) {
                 diags.push(Diagnostic::new_with_source(
-                    source.path.to_string_lossy().to_string(),
+                    source.display_path(),
                     i + 1,
                     1,
                     Severity::Error,

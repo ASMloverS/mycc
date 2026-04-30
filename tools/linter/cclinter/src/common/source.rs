@@ -1,5 +1,7 @@
 use std::fs;
 use std::path::{Path, PathBuf};
+use regex::Regex;
+use std::sync::LazyLock;
 
 #[derive(Clone, Debug)]
 pub struct SourceFile {
@@ -49,6 +51,10 @@ impl SourceFile {
     pub fn is_modified(&self) -> bool {
         self.content != self.original
     }
+
+    pub fn display_path(&self) -> String {
+        self.path.to_string_lossy().to_string()
+    }
 }
 
 pub fn mask_string_literals(line: &str) -> String {
@@ -89,6 +95,25 @@ pub fn strip_line_comment(line: &str) -> &str {
         }
     }
     line
+}
+
+static STRING_CHAR_RE: LazyLock<Regex> = LazyLock::new(|| {
+    Regex::new(r#""(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'"#).unwrap()
+});
+
+static BLOCK_COMMENT_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r"/\*.*?\*/").unwrap());
+
+pub fn mask_code_line(line: &str) -> String {
+    let s = STRING_CHAR_RE
+        .replace_all(line, |caps: &regex::Captures| {
+            " ".repeat(caps[0].len())
+        });
+    BLOCK_COMMENT_RE
+        .replace_all(&s, |caps: &regex::Captures| {
+            " ".repeat(caps[0].len())
+        })
+        .into_owned()
 }
 
 #[cfg(test)]

@@ -58,7 +58,7 @@ fn check_missing_return(source: &SourceFile) -> Vec<Diagnostic> {
                     if brace_depth <= 0 {
                         if !has_return {
                             diags.push(Diagnostic::new(
-                                source.path.to_string_lossy().to_string(),
+                                source.display_path(),
                                 fn_line,
                                 1,
                                 Severity::Warning,
@@ -79,7 +79,7 @@ fn check_missing_return(source: &SourceFile) -> Vec<Diagnostic> {
             if brace_depth <= 0 {
                 if !has_return {
                     diags.push(Diagnostic::new(
-                        source.path.to_string_lossy().to_string(),
+                        source.display_path(),
                         fn_line,
                         1,
                         Severity::Warning,
@@ -103,7 +103,7 @@ fn check_implicit_conversion(source: &SourceFile) -> Vec<Diagnostic> {
             let val: i64 = caps[3].parse().unwrap_or(0);
             if val != 0 {
                 diags.push(Diagnostic::new_with_source(
-                    source.path.to_string_lossy().to_string(),
+                    source.display_path(),
                     i + 1,
                     1,
                     Severity::Warning,
@@ -134,7 +134,7 @@ fn check_uninit_hints(source: &SourceFile) -> Vec<Diagnostic> {
     for (line_idx, name) in &uninit_decls {
         if !assigned.contains(name) {
             diags.push(Diagnostic::new_with_source(
-                source.path.to_string_lossy().to_string(),
+                source.display_path(),
                 line_idx + 1,
                 1,
                 Severity::Warning,

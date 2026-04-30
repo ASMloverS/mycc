@@ -15,7 +15,7 @@ pub fn check_complexity(source: &SourceFile, config: &ComplexityConfig) -> Vec<D
     let lines = source.lines();
     if lines.len() > config.max_file_lines {
         diags.push(Diagnostic::new_with_source(
-            source.path.to_string_lossy().to_string(),
+            source.display_path(),
             1,
             1,
             Severity::Warning,
@@ -101,7 +101,7 @@ fn emit_fn_diag(
     let len = end - start;
     if len > max_lines {
         diags.push(Diagnostic::new_with_source(
-            source.path.to_string_lossy().to_string(),
+            source.display_path(),
             start + 1,
             1,
             Severity::Warning,
@@ -126,7 +126,7 @@ fn check_nesting_depth(
         depth += opens;
         if depth > max_depth && !was_over {
             diags.push(Diagnostic::new_with_source(
-                source.path.to_string_lossy().to_string(),
+                source.display_path(),
                 i + 1,
                 1,
                 Severity::Warning,

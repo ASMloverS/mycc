@@ -1,5 +1,5 @@
 use crate::common::diag::{Diagnostic, Severity};
-use crate::common::source::SourceFile;
+use crate::common::source::{mask_code_line, strip_line_comment, SourceFile};
 use crate::config::UnusedConfig;
 use regex::Regex;
 use std::collections::HashMap;
@@ -25,36 +25,6 @@ static USE_RE: LazyLock<Regex> =
 static DEFINE_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"#define\s+(\w+)").unwrap());
 
-static STRING_CHAR_RE: LazyLock<Regex> = LazyLock::new(|| {
-    Regex::new(r#""(?:[^"\\]|\\.)*"|'(?:[^'\\]|\\.)*'"#).unwrap()
-});
-
-static BLOCK_COMMENT_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"/\*.*?\*/").unwrap());
-
-fn mask_exclusions(line: &str) -> String {
-    let s = STRING_CHAR_RE
-        .replace_all(line, |caps: &regex::Captures| {
-            " ".repeat(caps[0].len())
-        });
-    BLOCK_COMMENT_RE
-        .replace_all(&s, |caps: &regex::Captures| {
-            " ".repeat(caps[0].len())
-        })
-        .into_owned()
-}
-
-fn strip_line_comment(code: &str) -> &str {
-    match code.find("//") {
-        Some(pos) => &code[..pos],
-        None => code,
-    }
-}
-
-// KNOWN LIMITATION: This checker has no scope awareness. Variables declared
-// in inner scopes (e.g., inside if/for blocks) may produce false positives
-// or false negatives if the same name appears in multiple scopes.
-
 pub fn check_unused(source: &SourceFile, config: &UnusedConfig) -> Vec<Diagnostic> {
     if !config.enabled {
         return vec![];
@@ -71,7 +41,7 @@ fn check_unused_vars(source: &SourceFile) -> Vec<Diagnostic> {
     let lines = source.lines();
 
     for (i, line) in lines.iter().enumerate() {
-        let masked = mask_exclusions(line);
+        let masked = mask_code_line(line);
         let code = strip_line_comment(&masked);
         for caps in DECL_RE.captures_iter(code) {
             let name = caps[1].to_string();
@@ -87,7 +57,7 @@ fn check_unused_vars(source: &SourceFile) -> Vec<Diagnostic> {
         let count = id_counts.get(name).copied().unwrap_or(0);
         if count <= 1 {
             diags.push(Diagnostic::new_with_source(
-                source.path.to_string_lossy().to_string(),
+                source.display_path(),
                 line_idx + 1,
                 1,
                 Severity::Warning,
@@ -116,7 +86,7 @@ fn check_unused_macros(source: &SourceFile) -> Vec<Diagnostic> {
         if defined.values().any(|&idx| idx == i) {
             continue;
         }
-        let masked = mask_exclusions(line);
+        let masked = mask_code_line(line);
         let code = strip_line_comment(&masked);
         for caps in USE_RE.captures_iter(code) {
             *id_counts.entry(caps[1].to_string()).or_insert(0) += 1;
@@ -128,7 +98,7 @@ fn check_unused_macros(source: &SourceFile) -> Vec<Diagnostic> {
         let count = id_counts.get(name).copied().unwrap_or(0);
         if count == 0 {
             diags.push(Diagnostic::new_with_source(
-                source.path.to_string_lossy().to_string(),
+                source.display_path(),
                 line_idx + 1,
                 1,
                 Severity::Warning,

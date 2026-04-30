@@ -68,7 +68,7 @@ fn is_variable_index(s: &str) -> bool {
 }
 
 fn check_buffer_overflow_patterns(lines: &[&str], source: &SourceFile) -> Vec<Diagnostic> {
-    let path_str = source.path.to_string_lossy().to_string();
+    let path_str = source.display_path();
     let mut diags = Vec::new();
     let mut arrays: HashSet<String> = HashSet::new();
     let mut seen: HashSet<(usize, String)> = HashSet::new();
@@ -140,7 +140,7 @@ fn check_buffer_overflow_patterns(lines: &[&str], source: &SourceFile) -> Vec<Di
 }
 
 fn check_null_deref_patterns(lines: &[&str], source: &SourceFile) -> Vec<Diagnostic> {
-    let path_str = source.path.to_string_lossy().to_string();
+    let path_str = source.display_path();
     let mut diags = Vec::new();
     let mut null_ptrs: HashSet<String> = HashSet::new();
     let mut brace_depth: i32 = 0;

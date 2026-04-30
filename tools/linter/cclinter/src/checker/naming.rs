@@ -46,7 +46,7 @@ pub fn check_naming(source: &SourceFile, style: &str, kind: &str) -> Vec<Diagnos
             let name = caps[1].to_string();
             if !pattern_re.is_match(&name) {
                 diags.push(Diagnostic::new_with_source(
-                    source.path.to_string_lossy().to_string(),
+                    source.display_path(),
                     line_num + 1,
                     1,
                     Severity::Warning,
