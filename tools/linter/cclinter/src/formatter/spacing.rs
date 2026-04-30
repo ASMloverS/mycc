@@ -86,7 +86,7 @@ pub fn fix_spacing(
 }
 
 fn process_line_spacing(line: &str, config: &FormatConfig) -> String {
-    let trimmed = line.trim_end();
+    let trimmed = line.trim();
     if trimmed.starts_with('#') || trimmed.starts_with("//") {
         return line.to_string();
     }
