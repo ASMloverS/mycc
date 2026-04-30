@@ -58,7 +58,7 @@
 | T02 | `phase3-T02-basic.md` | basic level rules | ✅ Done |
 | T03 | `phase3-T03-strict.md` | strict level rules | ✅ Done |
 | T04 | `phase3-T04-deep.md` | deep level rules | ✅ Done |
-| T05 | `phase3-T05-integration.md` | Exit code 4, full integration + cross-platform tests | ⬜ Stub |
+| T05 | `phase3-T05-integration.md` | Exit code 4, full integration + cross-platform tests | ✅ Done |
 
 ---
 

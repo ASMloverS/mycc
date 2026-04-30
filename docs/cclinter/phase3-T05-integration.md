@@ -5,7 +5,7 @@
 - Create: `tests/integration_tests.rs`
 - Test fixtures: `tests/fixtures/analysis_test.c`
 
-- [ ] **Step 1: Wire up analyzer in `src/cli.rs`**
+- [x] **Step 1: Wire up analyzer in `src/cli.rs`**
 
 After the checker section, add analyzer invocation. Reuse `seen` HashSet from T09 for dedup:
 
@@ -42,7 +42,7 @@ if !args.format_only {
 }
 ```
 
-- [ ] **Step 2: Create integration test fixture**
+- [x] **Step 2: Create integration test fixture**
 
 Create `tests/fixtures/analysis_test.c`:
 
@@ -63,7 +63,7 @@ void process(char* input) {
 }
 ```
 
-- [ ] **Step 3: Write integration tests**
+- [x] **Step 3: Write integration tests**
 
 Create `tests/integration_tests.rs`:
 
@@ -119,12 +119,12 @@ fn test_diff_mode_output() {
 }
 ```
 
-- [ ] **Step 4: Run all tests**
+- [x] **Step 4: Run all tests**
 
 Run: `cargo test`
 Expected: All PASS.
 
-- [ ] **Step 5: Verify cross-platform build**
+- [x] **Step 5: Verify cross-platform build**
 
 ```bash
 cargo build --release
@@ -132,7 +132,7 @@ cargo build --release
 
 Verify binary exists: `target/release/cclinter` (Linux) or `target/release/cclinter.exe` (Windows).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add tools/linter/cclinter/

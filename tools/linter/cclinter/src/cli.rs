@@ -159,7 +159,7 @@ pub fn run() -> Result<(), Box<dyn std::error::Error>> {
         }
     }
 
-    if !args.format_only {
+    if !args.format_only && config.analysis.level != AnalysisLevel::None {
         let analysis_config = &config.analysis;
         let analysis_level = &analysis_config.level;
         let analysis_runtime_err = AtomicU8::new(0);
