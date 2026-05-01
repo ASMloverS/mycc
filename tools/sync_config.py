@@ -62,6 +62,19 @@ CONFIG_FILE_MAP = {
     "opencode": "AGENTS.md",
 }
 
+MODEL_OPTIONS = [
+    "(keep original)",
+    "claude-sonnet-4-6",
+    "claude-opus-4",
+    "claude-haiku-3",
+    "claude-sonnet-4",
+    "zai-coding-plan/glm-5.1",
+    "deepseek-chat",
+    "gpt-4.1",
+    "o4-mini",
+    "(manual input...)",
+]
+
 CAT_LABELS = {
     "agents": "Agents",
     "commands": "Commands",
@@ -184,14 +197,15 @@ def _term_height() -> int:
 _ANSI_RE = re.compile(r"\033\[[0-9;]*m")
 
 
-def emoji_checkbox(
+def _interactive_list(
     items: list[str],
-    message: str = "选择要拷贝的项目 (↑↓移动, 空格切换, 回车确认, q退出)",
-) -> list[str]:
-    if not items:
-        return []
-    cursor = 0
-    selected = [False] * len(items)
+    message: str,
+    mode: str = "checkbox",
+    default: int = 0,
+) -> list[str] | str | None:
+    n = len(items)
+    cursor = 0 if mode == "checkbox" else max(0, min(default, n - 1))
+    selected = [False] * n if mode == "checkbox" else None
     visible_rows = max(_term_height() - 4, 5)
     scroll_top = 0
     prev_lines = 0
@@ -200,26 +214,26 @@ def emoji_checkbox(
             scroll_top = cursor
         elif cursor >= scroll_top + visible_rows:
             scroll_top = cursor - visible_rows + 1
-        display_count = min(visible_rows, len(items) - scroll_top)
+        display_count = min(visible_rows, n - scroll_top)
         if prev_lines > 0:
             sys.stdout.write(f"\033[{prev_lines}A")
         sys.stdout.write("\033[J")
         lines = 0
-        indicator = ""
-        if len(items) > visible_rows:
-            indicator = f" ({cursor + 1}/{len(items)})"
+        indicator = f" ({cursor + 1}/{n})" if n > visible_rows else ""
         sys.stdout.write(f"\033[1m{message}{indicator}\033[0m\n")
         lines += 1
         for vi in range(display_count):
             i = scroll_top + vi
-            mark = "✅" if selected[i] else "⬜"
+            if mode == "checkbox":
+                mark = "✅" if selected[i] else "⬜"
+            else:
+                mark = "●" if i == cursor else "○"
             pointer = "▶" if i == cursor else " "
             sys.stdout.write(f" {pointer} {mark} {items[i]}\n")
             lines += 1
-        if len(items) > visible_rows:
-            bar_total = visible_rows
-            bar_pos = int(bar_total * cursor / max(len(items) - 1, 1))
-            bar_chars = ["─"] * bar_total
+        if n > visible_rows:
+            bar_pos = int(visible_rows * cursor / max(n - 1, 1))
+            bar_chars = ["─"] * visible_rows
             bar_chars[bar_pos] = "█"
             sys.stdout.write(f"  {''.join(bar_chars)}\n")
             lines += 1
@@ -227,17 +241,38 @@ def emoji_checkbox(
         prev_lines = lines
         key = get_key()
         if key == "up":
-            cursor = (cursor - 1) % len(items)
+            cursor = (cursor - 1) % n
         elif key == "down":
-            cursor = (cursor + 1) % len(items)
+            cursor = (cursor + 1) % n
         elif key == "space":
-            selected[cursor] = not selected[cursor]
+            if mode == "checkbox":
+                selected[cursor] = not selected[cursor]
+            else:
+                sys.stdout.write(f"\033[{prev_lines}A\033[J\n")
+                return items[cursor]
         elif key == "enter":
             sys.stdout.write(f"\033[{prev_lines}A\033[J\n")
-            return [items[i] for i in range(len(items)) if selected[i]]
+            if mode == "checkbox":
+                return [items[i] for i in range(n) if selected[i]]
+            return items[cursor]
         elif key == "q":
             sys.stdout.write(f"\033[{prev_lines}A\033[J\n")
-            return []
+            return [] if mode == "checkbox" else None
+
+
+def emoji_checkbox(
+    items: list[str],
+    message: str = "选择要拷贝的项目 (↑↓移动, 空格切换, 回车确认, q退出)",
+) -> list[str]:
+    return _interactive_list(items, message, mode="checkbox")  # type: ignore[return-value]
+
+
+def emoji_radiolist(
+    items: list[str],
+    message: str = "选择一个选项 (↑↓移动, 空格/回车确认, q退出)",
+    default: int = 0,
+) -> str | None:
+    return _interactive_list(items, message, mode="radio", default=default)  # type: ignore[return-value]
 
 
 # --- Custom Confirm ---
@@ -407,6 +442,19 @@ def _remove_path(path: Path) -> None:
         path.unlink()
 
 
+def _check_overwrite(dst: Path, new_content: str) -> bool:
+    if not dst.exists():
+        return True
+    existing = dst.read_text(encoding="utf-8")
+    if existing == new_content:
+        print(f"  跳过 (内容相同): {dst}")
+        return False
+    if not custom_confirm(f"目标已存在: {dst}\n是否覆盖？", default=False):
+        print(f"  跳过: {dst}")
+        return False
+    return True
+
+
 def _build_table_row(src: Path, cat: str, rel_dst: str) -> list[str]:
     c = CAT_COLORS.get(cat, "")
     return [
@@ -450,6 +498,78 @@ def _print_table(rows: list[list[str]], headers: list[str]) -> None:
     for i, srow in enumerate(stripped):
         print(f"  {fmt(srow, rows[i])}")
     print(f"  {bot}")
+
+
+# --- Frontmatter ---
+
+
+def parse_frontmatter(content: str) -> tuple[dict, str]:
+    """解析 Markdown 文件的 YAML frontmatter，返回 (元数据字典, 正文)"""
+    if not content.startswith("---"):
+        return {}, content
+    m = re.match(r"---[ \t]*\n(.*?)\n---[ \t]*\n", content, re.DOTALL)
+    if m is None:
+        return {}, content
+    fm_text = m.group(1)
+    body = content[m.end():]
+    if yaml is None:
+        return {}, content
+    try:
+        meta = yaml.safe_load(fm_text) or {}
+    except yaml.YAMLError:
+        meta = {}
+    if not isinstance(meta, dict):
+        meta = {}
+    return meta, body
+
+
+def write_frontmatter(content: str, overrides: dict) -> str:
+    """修改 Markdown 内容的 frontmatter 字段，返回修改后的完整内容"""
+    meta, body = parse_frontmatter(content)
+    meta.update(overrides)
+    if not meta:
+        return body
+    fm_text = yaml.dump(
+        meta, allow_unicode=True, default_flow_style=False, sort_keys=False
+    ).strip()
+    return f"---\n{fm_text}\n---\n{body}"
+
+
+def _resolve_model(
+    agent_path: Path, platform_key: str, batch_model: str | None
+) -> str | None:
+    content = agent_path.read_text(encoding="utf-8")
+    meta, _ = parse_frontmatter(content)
+    current_model = str(meta.get("model", ""))
+
+    if batch_model is not None:
+        return batch_model
+
+    options = list(MODEL_OPTIONS)
+    model_labels = []
+    default_idx = 0
+    for i, opt in enumerate(options):
+        if opt == current_model:
+            model_labels.append(f"{opt} ← 当前")
+            default_idx = i
+        else:
+            model_labels.append(opt)
+
+    selected = emoji_radiolist(
+        model_labels,
+        message=f"为 [{platform_key}] {agent_path.name} 选择 model (↑↓移动, 空格/回车确认, q跳过)",
+        default=default_idx,
+    )
+    if selected is None:
+        return None
+
+    chosen = options[model_labels.index(selected)]
+    if chosen == "(keep original)":
+        return current_model
+    if chosen == "(manual input...)":
+        manual = input("请输入 model 名称: ").strip()
+        return manual if manual else current_model
+    return chosen
 
 
 def _confirm(
@@ -530,17 +650,9 @@ def install_config(
     tag = "[DRY RUN] " if dry_run else ""
     installed = 0
     for src, dst, src_key in items:
-        if dst.exists():
-            existing_text = dst.read_text(encoding="utf-8")
-            new_text = src.read_text(encoding="utf-8")
-            if existing_text == new_text:
-                print(f"  跳过 (内容相同): {dst}")
-                continue
-            if not custom_confirm(
-                f"目标已存在: {dst}\n是否覆盖？", default=False
-            ):
-                print(f"  跳过: {dst}")
-                continue
+        new_text = src.read_text(encoding="utf-8")
+        if not _check_overwrite(dst, new_text):
+            continue
         print(f"{tag}安装配置: {src} -> {dst}")
         if dry_run:
             installed += 1
@@ -549,6 +661,25 @@ def install_config(
         shutil.copy2(src, dst)
         installed += 1
     print(f"\n{tag}已安装 {installed} 项配置")
+
+
+def scan_local_agents(cwd: Path, platform: str) -> list[tuple[Path, str]]:
+    """扫描 custom-harness/{platform}/agents/*.md，返回 [(agent_path, platform_key)]"""
+    platforms = ["claude", "opencode"] if platform == "all" else [platform]
+    agents: list[tuple[Path, str]] = []
+    for p in platforms:
+        agents_dir = cwd / "custom-harness" / p / "agents"
+        if agents_dir.is_dir():
+            for md in sorted(agents_dir.glob("*.md")):
+                agents.append((md, p))
+    return agents
+
+
+def get_agent_install_target(
+    agent_path: Path, platform: str, sources: dict[str, Path]
+) -> Path:
+    """计算 agent 安装目标路径"""
+    return sources[platform] / "custom-harness" / "agents" / agent_path.name
 
 
 def _run_install(
@@ -570,20 +701,147 @@ def _run_install(
     install_config(items, src_labels, dry_run=dry_run)
 
 
+def _run_install_agents(
+    args, sources: dict[str, Path], src_labels: dict[str, str]
+) -> None:
+    dry_run = args.dry_run
+    platform = args.platform
+    batch_model = args.model
+    cwd = Path.cwd()
+
+    agents = scan_local_agents(cwd, platform)
+    if not agents:
+        print("未发现可安装的 agents")
+        print("  期望路径: custom-harness/{claude,opencode}/agents/*.md")
+        return
+
+    label_to_agent = {}
+    agent_labels = []
+    for agent_path, platform_key in agents:
+        label = f"[{platform_key}] {agent_path.name}"
+        label_to_agent[label] = (agent_path, platform_key)
+        agent_labels.append(label)
+    print(f"发现 {len(agents)} 个 agents:")
+    for label in agent_labels:
+        print(f"  {label}")
+    print()
+
+    chosen_labels = emoji_checkbox(
+        agent_labels,
+        message="选择要安装的 agents (↑↓移动, 空格切换, 回车确认, q退出)",
+    )
+    if not chosen_labels:
+        print("未选择任何 agent")
+        return
+
+    agent_models: dict[tuple[Path, str], str] = {}
+    for label in chosen_labels:
+        agent_path, platform_key = label_to_agent[label]
+        model = _resolve_model(agent_path, platform_key, batch_model)
+        if model is not None:
+            agent_models[(agent_path, platform_key)] = model
+
+    if not agent_models:
+        print("没有需要安装的 agent")
+        return
+
+    print(f"\n即将安装 {len(agent_models)} 个 agents:")
+    rows = []
+    for (agent_path, platform_key), model in agent_models.items():
+        target = get_agent_install_target(agent_path, platform_key, sources)
+        c = CAT_COLORS.get("agents", "")
+        rows.append(
+            [
+                f"{c}{platform_key}{RST}",
+                agent_path.name,
+                model,
+                str(target),
+            ]
+        )
+    _print_table(rows, ["平台", "Agent", "Model", "目标路径"])
+
+    if not custom_confirm("确认安装以上 agents？", default=True):
+        print("已取消")
+        return
+
+    tag = "[DRY RUN] " if dry_run else ""
+    installed = 0
+    for (agent_path, platform_key), model in agent_models.items():
+        target = get_agent_install_target(agent_path, platform_key, sources)
+        content = agent_path.read_text(encoding="utf-8")
+        target_content = write_frontmatter(content, {"model": model})
+
+        if not _check_overwrite(target, target_content):
+            continue
+
+        print(f"{tag}安装 agent: {agent_path} -> {target} (model: {model})")
+        if dry_run:
+            installed += 1
+            continue
+
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(target_content, encoding="utf-8")
+        installed += 1
+
+    print(f"\n{tag}已安装 {installed} 个 agents")
+
+
 def main() -> None:
     _enable_vt100()
+
+    argv = sys.argv[1:]
+
+    # 向后兼容: --install 标志 → install 子命令
+    if "--install" in argv:
+        argv = [a for a in argv if a != "--install"]
+        argv = ["install"] + argv
+
+    # 无子命令时默认 pull (不影响 --help)
+    has_subcommand = any(a in argv for a in ("pull", "install", "install-agents"))
+    if not has_subcommand and "--help" not in argv and "-h" not in argv:
+        argv = ["pull"] + argv
+
     parser = argparse.ArgumentParser(
         description="交互式拷贝用户域 AI 编码工具配置到当前目录"
     )
-    parser.add_argument("--dry-run", action="store_true", help="预览模式，不实际拷贝")
-    parser.add_argument("--install", action="store_true", help="安装模式：从当前目录安装配置到用户域")
-    args = parser.parse_args()
+    sub = parser.add_subparsers(dest="command")
+
+    pull_p = sub.add_parser("pull", help="拉取模式：从用户域拷贝配置到当前目录")
+    pull_p.add_argument("--dry-run", action="store_true", help="预览模式，不实际拷贝")
+
+    install_p = sub.add_parser(
+        "install", help="安装模式：从当前目录安装配置到用户域"
+    )
+    install_p.add_argument(
+        "--dry-run", action="store_true", help="预览模式，不实际拷贝"
+    )
+
+    ia_p = sub.add_parser(
+        "install-agents", help="安装 agents 到用户域并设置 model"
+    )
+    ia_p.add_argument(
+        "--platform",
+        choices=["claude", "opencode", "all"],
+        default="all",
+        help="目标平台 (默认: all)",
+    )
+    ia_p.add_argument("--model", type=str, default=None, help="批量设置 model")
+    ia_p.add_argument(
+        "--dry-run", action="store_true", help="预览模式，不实际拷贝"
+    )
+
+    args = parser.parse_args(argv)
     sources, src_labels, skip = load_config()
 
-    if args.install:
+    if args.command == "install":
         _run_install(sources, src_labels, dry_run=args.dry_run)
         return
 
+    if args.command == "install-agents":
+        _run_install_agents(args, sources, src_labels)
+        return
+
+    # pull (默认)
     print("扫描配置源...")
     categories = scan_sources(sources, skip)
     total = sum(len(v) for v in categories.values())
