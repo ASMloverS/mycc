@@ -57,6 +57,11 @@ DEFAULT_SKIP = {
     "__pycache__",
 }
 
+CONFIG_FILE_MAP = {
+    "claude": "CLAUDE.md",
+    "opencode": "AGENTS.md",
+}
+
 CAT_LABELS = {
     "agents": "Agents",
     "commands": "Commands",
@@ -467,6 +472,8 @@ def get_target(
         return cwd / "custom-harness" / src_key / category / name
     if category == "skills":
         return cwd / "skills" / src_key / name
+    if category == "config":
+        return cwd / "custom-harness" / src_key / name
     return cwd / name
 
 
@@ -504,14 +511,83 @@ def copy_items(
     _print_table(rows, TABLE_HEADERS)
 
 
+def scan_install_config(
+    sources: dict[str, Path],
+) -> list[tuple[Path, Path, str]]:
+    cwd = Path.cwd()
+    items = []
+    for src_key, filename in CONFIG_FILE_MAP.items():
+        if src_key not in sources:
+            continue
+        src = cwd / "custom-harness" / src_key / filename
+        if src.exists() and src.is_file():
+            dst = sources[src_key] / filename
+            items.append((src, dst, src_key))
+    return items
+
+
+def install_config(
+    items: list[tuple[Path, Path, str]],
+    src_labels: dict[str, str],
+    dry_run: bool = False,
+) -> None:
+    tag = "[DRY RUN] " if dry_run else ""
+    installed = 0
+    for src, dst, src_key in items:
+        if dst.exists():
+            existing_text = dst.read_text(encoding="utf-8")
+            new_text = src.read_text(encoding="utf-8")
+            if existing_text == new_text:
+                print(f"  跳过 (内容相同): {dst}")
+                continue
+            if not custom_confirm(
+                f"目标已存在: {dst}\n是否覆盖？", default=False
+            ):
+                print(f"  跳过: {dst}")
+                continue
+        print(f"{tag}安装配置: {src} -> {dst}")
+        if dry_run:
+            installed += 1
+            continue
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dst)
+        installed += 1
+    print(f"\n{tag}已安装 {installed} 项配置")
+
+
+def _run_install(
+    sources: dict[str, Path], src_labels: dict[str, str], dry_run: bool = False
+) -> None:
+    items = scan_install_config(sources)
+    if not items:
+        print("未发现可安装的配置文件")
+        print("  期望路径: custom-harness/claude/CLAUDE.md, custom-harness/opencode/AGENTS.md")
+        return
+    print("发现可安装的配置文件:")
+    for src, dst, src_key in items:
+        exists_tag = " [已存在]" if dst.exists() else ""
+        print(f"  {src_key}: {src} -> {dst}{exists_tag}")
+    print()
+    if not custom_confirm("确认安装以上配置？", default=True):
+        print("已取消")
+        return
+    install_config(items, src_labels, dry_run=dry_run)
+
+
 def main() -> None:
     _enable_vt100()
     parser = argparse.ArgumentParser(
         description="交互式拷贝用户域 AI 编码工具配置到当前目录"
     )
     parser.add_argument("--dry-run", action="store_true", help="预览模式，不实际拷贝")
+    parser.add_argument("--install", action="store_true", help="安装模式：从当前目录安装配置到用户域")
     args = parser.parse_args()
     sources, src_labels, skip = load_config()
+
+    if args.install:
+        _run_install(sources, src_labels, dry_run=args.dry_run)
+        return
+
     print("扫描配置源...")
     categories = scan_sources(sources, skip)
     total = sum(len(v) for v in categories.values())

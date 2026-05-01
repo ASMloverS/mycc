@@ -9,6 +9,8 @@ from sync_config import (
     _iter_items,
     copy_items,
     get_target,
+    install_config,
+    scan_install_config,
     scan_sources,
 )
 
@@ -210,18 +212,25 @@ class TestGetTarget:
         result = get_target(src, "skills", "agents", from_harness=False)
         assert result == Path.cwd() / "skills" / "agents" / "myskill"
 
-    def test_config_goes_to_cwd_root(self, tmp_path: Path):
+    def test_config_goes_to_custom_harness(self, tmp_path: Path):
         src = tmp_path / "source" / "CLAUDE.md"
         src.parent.mkdir(parents=True)
         src.write_text("x", encoding="utf-8")
         result = get_target(src, "config", "claude", from_harness=False)
-        assert result == Path.cwd() / "CLAUDE.md"
+        assert result == Path.cwd() / "custom-harness" / "claude" / "CLAUDE.md"
 
-    def test_non_harness_non_skill_goes_to_root(self, tmp_path: Path):
+    def test_config_opencode_goes_to_custom_harness(self, tmp_path: Path):
+        src = tmp_path / "source" / "AGENTS.md"
+        src.parent.mkdir(parents=True)
+        src.write_text("x", encoding="utf-8")
+        result = get_target(src, "config", "opencode", from_harness=False)
+        assert result == Path.cwd() / "custom-harness" / "opencode" / "AGENTS.md"
+
+    def test_non_harness_non_skill_non_config_goes_to_root(self, tmp_path: Path):
         src = tmp_path / "source" / "readme.md"
         src.parent.mkdir(parents=True)
         src.write_text("x", encoding="utf-8")
-        result = get_target(src, "config", "claude", from_harness=False)
+        result = get_target(src, "unknown", "claude", from_harness=False)
         assert result == Path.cwd() / "readme.md"
 
 
@@ -298,7 +307,7 @@ class TestCopyItems:
         copy_items(selected, dry_run=False)
         assert (dest / "skills" / "agents" / "myskill" / "SKILL.md").exists()
 
-    def test_copy_config_to_root(self, tmp_path: Path, monkeypatch):
+    def test_copy_config_to_custom_harness(self, tmp_path: Path, monkeypatch):
         src = tmp_path / "src" / "CLAUDE.md"
         src.parent.mkdir(parents=True)
         src.write_text("# claude", encoding="utf-8")
@@ -307,7 +316,7 @@ class TestCopyItems:
         monkeypatch.chdir(dest)
         selected = [(src, "config", "claude", False)]
         copy_items(selected, dry_run=False)
-        assert (dest / "CLAUDE.md").exists()
+        assert (dest / "custom-harness" / "claude" / "CLAUDE.md").exists()
 
 
 # ---------------------------------------------------------------------------
@@ -341,3 +350,160 @@ class TestEndToEnd:
         assert (dest_cwd / "custom-harness" / "claude" / "agents" / "coder.md").exists()
         assert (dest_cwd / "custom-harness" / "opencode" / "commands" / "opencode-flow.md").exists()
         assert (dest_cwd / "skills" / "agents" / "myskill" / "SKILL.md").exists()
+
+
+# ---------------------------------------------------------------------------
+# scan_install_config / install_config
+# ---------------------------------------------------------------------------
+
+
+class TestScanInstallConfig:
+    def test_finds_claude_md(self, fake_home: Path, monkeypatch):
+        project = fake_home / "project"
+        (project / "custom-harness" / "claude").mkdir(parents=True)
+        (project / "custom-harness" / "claude" / "CLAUDE.md").write_text(
+            "# claude", encoding="utf-8"
+        )
+        monkeypatch.chdir(project)
+        sources = {
+            "claude": fake_home / ".claude",
+            "opencode": fake_home / ".config" / "opencode",
+        }
+        items = scan_install_config(sources)
+        assert len(items) == 1
+        src, dst, src_key = items[0]
+        assert src == project / "custom-harness" / "claude" / "CLAUDE.md"
+        assert dst == fake_home / ".claude" / "CLAUDE.md"
+        assert src_key == "claude"
+
+    def test_finds_agents_md(self, fake_home: Path, monkeypatch):
+        project = fake_home / "project"
+        (project / "custom-harness" / "opencode").mkdir(parents=True)
+        (project / "custom-harness" / "opencode" / "AGENTS.md").write_text(
+            "# agents", encoding="utf-8"
+        )
+        monkeypatch.chdir(project)
+        sources = {
+            "claude": fake_home / ".claude",
+            "opencode": fake_home / ".config" / "opencode",
+        }
+        items = scan_install_config(sources)
+        assert len(items) == 1
+        src, dst, src_key = items[0]
+        assert src == project / "custom-harness" / "opencode" / "AGENTS.md"
+        assert dst == fake_home / ".config" / "opencode" / "AGENTS.md"
+        assert src_key == "opencode"
+
+    def test_finds_both(self, fake_home: Path, monkeypatch):
+        project = fake_home / "project"
+        (project / "custom-harness" / "claude").mkdir(parents=True)
+        (project / "custom-harness" / "opencode").mkdir(parents=True)
+        (project / "custom-harness" / "claude" / "CLAUDE.md").write_text(
+            "# c", encoding="utf-8"
+        )
+        (project / "custom-harness" / "opencode" / "AGENTS.md").write_text(
+            "# a", encoding="utf-8"
+        )
+        monkeypatch.chdir(project)
+        sources = {
+            "claude": fake_home / ".claude",
+            "opencode": fake_home / ".config" / "opencode",
+        }
+        items = scan_install_config(sources)
+        assert len(items) == 2
+        keys = {sk for _, _, sk in items}
+        assert keys == {"claude", "opencode"}
+
+    def test_empty_when_no_config_files(self, fake_home: Path, monkeypatch):
+        project = fake_home / "project"
+        (project / "custom-harness" / "claude").mkdir(parents=True)
+        monkeypatch.chdir(project)
+        sources = {
+            "claude": fake_home / ".claude",
+            "opencode": fake_home / ".config" / "opencode",
+        }
+        items = scan_install_config(sources)
+        assert items == []
+
+
+class TestInstallConfig:
+    def test_install_to_empty_target(self, tmp_path: Path, monkeypatch):
+        project = tmp_path / "project"
+        (project / "custom-harness" / "claude").mkdir(parents=True)
+        (project / "custom-harness" / "claude" / "CLAUDE.md").write_text(
+            "# new config", encoding="utf-8"
+        )
+        claude_home = tmp_path / "home" / ".claude"
+        claude_home.mkdir(parents=True)
+        monkeypatch.chdir(project)
+        sources = {"claude": claude_home}
+        src_labels = {"claude": "~/.claude"}
+        items = scan_install_config(sources)
+        install_config(items, src_labels, dry_run=False)
+        assert (claude_home / "CLAUDE.md").exists()
+        assert (claude_home / "CLAUDE.md").read_text(encoding="utf-8") == "# new config"
+
+    def test_install_overwrites_different(self, tmp_path: Path, monkeypatch):
+        project = tmp_path / "project"
+        (project / "custom-harness" / "claude").mkdir(parents=True)
+        (project / "custom-harness" / "claude" / "CLAUDE.md").write_text(
+            "# updated", encoding="utf-8"
+        )
+        claude_home = tmp_path / "home" / ".claude"
+        claude_home.mkdir(parents=True)
+        (claude_home / "CLAUDE.md").write_text("# old", encoding="utf-8")
+        monkeypatch.chdir(project)
+        sources = {"claude": claude_home}
+        src_labels = {"claude": "~/.claude"}
+        items = scan_install_config(sources)
+        monkeypatch.setattr("sync_config.custom_confirm", lambda *a, **kw: True)
+        install_config(items, src_labels, dry_run=False)
+        assert (claude_home / "CLAUDE.md").read_text(encoding="utf-8") == "# updated"
+
+    def test_install_skips_identical(self, tmp_path: Path, monkeypatch):
+        project = tmp_path / "project"
+        (project / "custom-harness" / "claude").mkdir(parents=True)
+        (project / "custom-harness" / "claude" / "CLAUDE.md").write_text(
+            "# same", encoding="utf-8"
+        )
+        claude_home = tmp_path / "home" / ".claude"
+        claude_home.mkdir(parents=True)
+        (claude_home / "CLAUDE.md").write_text("# same", encoding="utf-8")
+        monkeypatch.chdir(project)
+        sources = {"claude": claude_home}
+        src_labels = {"claude": "~/.claude"}
+        items = scan_install_config(sources)
+        install_config(items, src_labels, dry_run=False)
+        assert (claude_home / "CLAUDE.md").read_text(encoding="utf-8") == "# same"
+
+    def test_install_declines_overwrite(self, tmp_path: Path, monkeypatch):
+        project = tmp_path / "project"
+        (project / "custom-harness" / "claude").mkdir(parents=True)
+        (project / "custom-harness" / "claude" / "CLAUDE.md").write_text(
+            "# new", encoding="utf-8"
+        )
+        claude_home = tmp_path / "home" / ".claude"
+        claude_home.mkdir(parents=True)
+        (claude_home / "CLAUDE.md").write_text("# old", encoding="utf-8")
+        monkeypatch.chdir(project)
+        sources = {"claude": claude_home}
+        src_labels = {"claude": "~/.claude"}
+        items = scan_install_config(sources)
+        monkeypatch.setattr("sync_config.custom_confirm", lambda *a, **kw: False)
+        install_config(items, src_labels, dry_run=False)
+        assert (claude_home / "CLAUDE.md").read_text(encoding="utf-8") == "# old"
+
+    def test_dry_run_does_not_write(self, tmp_path: Path, monkeypatch):
+        project = tmp_path / "project"
+        (project / "custom-harness" / "claude").mkdir(parents=True)
+        (project / "custom-harness" / "claude" / "CLAUDE.md").write_text(
+            "# new", encoding="utf-8"
+        )
+        claude_home = tmp_path / "home" / ".claude"
+        claude_home.mkdir(parents=True)
+        monkeypatch.chdir(project)
+        sources = {"claude": claude_home}
+        src_labels = {"claude": "~/.claude"}
+        items = scan_install_config(sources)
+        install_config(items, src_labels, dry_run=True)
+        assert not (claude_home / "CLAUDE.md").exists()
