@@ -313,14 +313,10 @@ def scan_sources(
         if not src_root.exists():
             continue
         _scan_harness(src_root, src_key, skip, cats)
-        if src_key == "claude":
-            fp = src_root / "CLAUDE.md"
+        if src_key in CONFIG_FILE_MAP:
+            fp = src_root / CONFIG_FILE_MAP[src_key]
             if fp.exists():
                 cats.setdefault("config", []).append((fp, src_key, "", False))
-        elif src_key == "opencode":
-            ag = src_root / "AGENTS.md"
-            if ag.exists():
-                cats.setdefault("config", []).append((ag, src_key, "", False))
     return cats
 
 
@@ -389,20 +385,32 @@ def interactive_select(
 
 
 def _strwidth(s: str) -> int:
-    w = 0
-    for ch in s:
-        eaw = unicodedata.east_asian_width(ch)
-        w += 2 if eaw in ("W", "F") else 1
-    return w
+    return sum(2 if unicodedata.east_asian_width(ch) in ("W", "F") else 1 for ch in s)
 
 
 TABLE_HEADERS = ["类别", "名称", "类型", "目标路径"]
 
 
+def _rel_path(path: Path, base: Path) -> str:
+    try:
+        return str(path.relative_to(base))
+    except ValueError:
+        return str(path)
+
+
+def _remove_path(path: Path) -> None:
+    if not path.exists():
+        return
+    if path.is_dir():
+        shutil.rmtree(path)
+    else:
+        path.unlink()
+
+
 def _build_table_row(src: Path, cat: str, rel_dst: str) -> list[str]:
     c = CAT_COLORS.get(cat, "")
     return [
-        f"{c}{CAT_LABELS[cat]}{RST}",
+        f"{c}{CAT_LABELS.get(cat, cat.title())}{RST}",
         str(src.name),
         "目录" if src.is_dir() else "文件",
         rel_dst,
@@ -451,11 +459,7 @@ def _confirm(
     rows = []
     for src, cat, src_key, from_harness in selected:
         dst = get_target(src, cat, src_key, from_harness)
-        try:
-            rel_dst = str(dst.relative_to(cwd))
-        except ValueError:
-            rel_dst = str(dst)
-        rows.append(_build_table_row(src, cat, rel_dst))
+        rows.append(_build_table_row(src, cat, _rel_path(dst, cwd)))
     print(f"\n即将拷贝 {len(selected)} 项:")
     _print_table(rows, TABLE_HEADERS)
     return custom_confirm("确认执行？", default=True)
@@ -490,11 +494,7 @@ def copy_items(
         if dry_run:
             continue
         if src.is_dir():
-            if dst.exists():
-                if dst.is_dir():
-                    shutil.rmtree(dst)
-                else:
-                    dst.unlink()
+            _remove_path(dst)
             shutil.copytree(src, dst, symlinks=False)
         else:
             dst.parent.mkdir(parents=True, exist_ok=True)
@@ -502,11 +502,7 @@ def copy_items(
     cwd = Path.cwd()
     rows = []
     for src, cat, dst in targets:
-        try:
-            rel_dst = str(dst.relative_to(cwd))
-        except ValueError:
-            rel_dst = str(dst)
-        rows.append(_build_table_row(src, cat, rel_dst))
+        rows.append(_build_table_row(src, cat, _rel_path(dst, cwd)))
     print(f"\n{tag}已拷贝 {len(selected)} 项:")
     _print_table(rows, TABLE_HEADERS)
 
@@ -611,10 +607,7 @@ def main() -> None:
     for d in sorted(dirs_to_delete):
         target = Path.cwd() / d
         if target.exists():
-            if target.is_dir():
-                shutil.rmtree(target)
-            else:
-                target.unlink()
+            _remove_path(target)
             print(f"已删除旧目录: {target}/")
     print(f"\n开始拷贝...\n")
     copy_items(selected, dry_run=args.dry_run)
