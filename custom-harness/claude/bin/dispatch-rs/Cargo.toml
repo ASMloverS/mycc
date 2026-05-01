@@ -3,9 +3,17 @@ name = "dispatch"
 version = "0.1.0"
 edition = "2021"
 
+[lib]
+name = "dispatch"
+path = "src/lib.rs"
+
 [[bin]]
 name = "dispatch"
 path = "src/main.rs"
+
+[[bin]]
+name = "harness-install"
+path = "tools/harness-install/main.rs"
 
 [dependencies]
 serde = { version = "1", features = ["derive"] }
@@ -13,6 +21,7 @@ serde_yaml = "0.9"
 serde_json = "1"
 bincode = "1"
 anyhow = "1"
+dialoguer = "0.11"
 
 [dev-dependencies]
 tempfile = "3"

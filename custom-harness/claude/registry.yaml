@@ -10,8 +10,9 @@ agents:
   vsc-committer:    { path: agents/vsc-committer.md,    desc: "Git/SVN add+commit w/ smart filtering, gitmoji (git) / plain (svn) msg, optional push" }
 
 skills:
-  doc-refine: { path: skills/doc-refine/SKILL.md, desc: "Ultra-compress docs (EN caveman / CN 文言文)" }
-  doc-sync:   { path: skills/doc-sync/SKILL.md,   desc: "Align Markdown docs with current code" }
-  doc-write:  { path: skills/doc-write/SKILL.md,  desc: "Write docs from context (CN 文言文 / EN caveman)" }
+  doc-refine:        { path: skills/doc-refine/SKILL.md,        desc: "Ultra-compress docs (EN caveman / CN 文言文)" }
+  doc-sync:          { path: skills/doc-sync/SKILL.md,          desc: "Align Markdown docs with current code" }
+  doc-write:         { path: skills/doc-write/SKILL.md,         desc: "Write docs from context (CN 文言文 / EN caveman)" }
+  torvalds-doctrine: { path: skills/torvalds-doctrine/SKILL.md, desc: "Aggressive AI coding guidelines inspired by Linus Torvalds. Enforce data structure supremacy, simple code, proof over hand-waving, and a bogus-shit detector." }
 
 commands: {}
