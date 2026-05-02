@@ -1,6 +1,6 @@
 # Task 01: Project scaffold — Cargo.toml + main.rs + lib.rs
 
-> Status: ⬜ Not started
+> Status: ✅ Done
 > Deps: none
 > Output: `cargo build` passes, `cargo run -- --help` works
 

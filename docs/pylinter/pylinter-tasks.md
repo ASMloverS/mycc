@@ -6,7 +6,7 @@ Design: [pylinter-design.md](./pylinter-design.md)
 
 | # | Task | Deps | Status |
 |---|---|---|---|
-| 01 | [Scaffold — Cargo.toml + main.rs + lib.rs](./task-01-scaffold.md) | — | ⬜ TODO |
+| 01 | [Scaffold — Cargo.toml + main.rs + lib.rs](./task-01-scaffold.md) | — | ✅ Done |
 | 02 | [Config — config.rs + .pylinter.yaml](./task-02-config.md) | 01 | ⬜ TODO |
 | 03 | [Common — SourceFile + Diagnostic + string_utils](./task-03-common.md) | 01 | ⬜ TODO |
 | 04 | [CLI + file collect + ignore](./task-04-cli.md) | 02, 03 | ⬜ TODO |
