@@ -2,7 +2,7 @@
 name = "pylinter"
 version = "0.1.0"
 edition = "2021"
-description = "Python 3.12+ linter: format + style check + static analysis"
+description = "Python 3.14+ linter: format + style check + static analysis"
 
 [dependencies]
 clap = { version = "4", features = ["derive"] }

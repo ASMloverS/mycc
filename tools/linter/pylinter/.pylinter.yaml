@@ -1,0 +1,43 @@
+format:
+  indent_width: 4
+  use_tabs: false
+  column_limit: 120
+  line_ending: lf
+  encoding: utf-8
+  trailing_whitespace: strip
+  blank_lines_before_class: 2
+  blank_lines_before_function: 2
+  blank_lines_inside_class: 1
+  max_consecutive_blank_lines: 2
+  import_sorting: pep8
+  binary_op_line_break: before
+  comment_style: hash
+
+check:
+  naming:
+    function: snake_case
+    class: pascal_case
+    constant: upper_snake_case
+    variable: snake_case
+    module: snake_case
+  complexity:
+    max_function_lines: 50
+    max_class_lines: 300
+    max_file_lines: 1000
+    max_nesting_depth: 4
+  magic_number:
+    enabled: true
+    allowed: [0, 1, -1, 2]
+  unused_import:
+    enabled: true
+  prohibited:
+    use_default: true
+    extra: []
+    remove: []
+  docstring:
+    module: true
+    class: true
+    function: true
+
+analysis:
+  level: basic
