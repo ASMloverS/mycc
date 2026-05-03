@@ -1,6 +1,6 @@
 # Task 07: Formatter — Trailing Whitespace Removal
 
-> Status: ⬜ Not started
+> Status: ✅ Done
 > Depends on: Task 05
 > Output: All trailing whitespace stripped
 
