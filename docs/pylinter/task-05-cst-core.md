@@ -1,6 +1,6 @@
 # Task 05: CST Core — tokenize + parse + CSTSource + regenerate
 
-> Status: ⬜ Not started
+> Status: ✅ Done
 > Depends: Task 03
 > Output: Python src → tokenize → CSTSource → regenerate = identical text (roundtrip)
 
