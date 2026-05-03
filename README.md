@@ -1,50 +1,58 @@
 # mycc
 
-User-domain AI coding configs + C language toolchain.
+User-domain AI coding configs + C/Python linter toolchain.
 
 ## Structure
 
 ```
 mycc/
 ├── tools/
-│   ├── sync_config.py         # interactive config sync
-│   ├── test_sync_config.py    # sync_config tests
-│   ├── sync_config.yaml       # sync source manifest
-│   ├── statusline.mjs         # opencode status bar (ctx%, branch, cost)
-│   └── linter/cclinter/       # Rust C linter (see below)
-├── custom-harness/claude/     # Claude harness: agents, commands, skills, bin
-├── skills/claude/             # Claude skill dispatch
-├── docs/                      # design docs
+│   ├── sync_config.py              # bidirectional config sync (pull/install)
+│   ├── test_sync_config.py         # sync_config tests
+│   ├── sync_config.yaml            # sync source manifest
+│   ├── statusline.mjs              # opencode status bar (ctx%, branch, cost)
+│   └── linter/
+│       ├── cclinter/               # Rust C linter (see below)
+│       └── pylinter/               # Rust Python linter (see below)
+├── custom-harness/
+│   ├── claude/                     # Claude harness: agents, commands, skills, bin
+│   └── opencode/                   # OpenCode harness: AGENTS.md
+├── skills/claude/                  # Claude skill dispatch
+├── docs/
 │   ├── harness-design.md
-│   └── cclinter/
-├── AGENTS.md                  # agentic edit rules
-├── CLAUDE.md                  # Claude-specific rules + gitmoji convention
-├── sync.bat / sync.sh         # sync_config launchers (Win / Unix)
+│   ├── dispatch-optimization.md
+│   ├── harness-stabilization.md
+│   ├── cclinter/                   # cclinter design + task docs
+│   └── pylinter/                   # pylinter design + task docs
+├── sync.bat / sync.sh              # sync_config launchers (Win / Unix)
 └── README.md
 ```
 
 ## sync_config.py
 
-Interactive copy from `~/.claude`, `~/.agents`, `~/.config/opencode` → repo.
+Bidirectional sync between user-domain (`~/.claude`, `~/.config/opencode`) ↔ repo.
 
 ### Usage
 
 ```bash
-python tools/sync_config.py            # interactive select → copy
-python tools/sync_config.py --dry-run  # preview only
+python tools/sync_config.py pull                # interactive select → copy to repo
+python tools/sync_config.py pull --dry-run      # preview only
+python tools/sync_config.py install             # copy from repo → user domain
+python tools/sync_config.py install-agents      # install agents + set model
 ```
 
-Requires `pip install inquirer`.
+Requires `pip install pyyaml`.
 
 ### Skip
 
-~30 items skipped by name: `.credentials.json`, `node_modules`, `__pycache__`, `cache`, `sessions`, etc. See `SKIP` set.
+~30 items skipped by name: `.credentials.json`, `node_modules`, `__pycache__`, `cache`, `sessions`, etc. See `DEFAULT_SKIP` set.
 
 ### Behavior
 
+- **pull**: interactive select → copy from user domain to repo. Harness sources scanned from `custom-harness/<source>/`.
+- **install**: copy from repo → user domain.
+- **install-agents**: batch install agent files + optional model override.
 - Copy: file → overwrite, dir → `rmtree` + `copytree`.
-- Source discovery: scans `custom-harness/<source>/` subdirectories (agents, commands, skills, bin).
-- Returns 4-tuples: `(Path, src_key, sub_cat, from_harness)`.
 
 ## cclinter
 
@@ -54,18 +62,9 @@ Rust-based C language linter at `tools/linter/cclinter/`.
 
 **Tech stack:** Rust stable, clap, serde_yaml, regex, rayon, walkdir, globset, colored, similar.
 
-### Implemented
+### Status
 
-| Engine | Feature | Status |
-|--------|---------|--------|
-| Formatter | Encoding (BOM/CRLF/trailing ws) | Done |
-| Formatter | Indent (tab→2-space, brace-level) | Done |
-| Formatter | Spacing (ops, comma, paren, semicolon) | Done |
-| Formatter | YAML config loading | Done |
-| Checker | Diagnostic framework (clang-tidy output) | Done |
-| Analyzer | Analysis level framework (basic/strict/deep) | Done |
-
-See `docs/cclinter/index.md` for full task tracking.
+All three phases complete (17 formatting tasks, 9 checker tasks, 5 analyzer tasks). See `docs/cclinter/index.md`.
 
 ### Build & Test
 
@@ -75,9 +74,29 @@ cargo build
 cargo test
 ```
 
+## pylinter
+
+Rust-based Python 3.14+ linter at `tools/linter/pylinter/`.
+
+**Architecture:** CST-based (rustpython-parser). Peer of cclinter — same three-engine design: formatter → checker → analyzer.
+
+**Tech stack:** Rust stable, clap, serde_yaml, regex, rayon, walkdir, globset, colored, similar, rustpython-parser.
+
+### Status
+
+Phase 1 scaffold + core formatting in progress (7/10 tasks done). See `docs/pylinter/pylinter-tasks.md`.
+
+### Build & Test
+
+```bash
+cd tools/linter/pylinter
+cargo build
+cargo test
+```
+
 ## Rules
 
-See `AGENTS.md`:
+See `custom-harness/opencode/AGENTS.md`:
 - Grep → Read ±20 lines → Edit. ≤100 lines/Edit.
 - UTF-8, LF, no trailing whitespace.
 - Gitmoji commit format: `gitmoji type(scope): desc`.
