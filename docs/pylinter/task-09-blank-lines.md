@@ -1,6 +1,6 @@
 # Task 09: Formatter — blank_lines (AST-aware)
 
-> Status: ⬜ Not started
+> Status: ✅ Done
 > Depends: Task 05, Task 08
 > Output: PEP 8 blank line rules: 2 blank lines before top-level fn/class, 1 blank line before methods inside class
 
