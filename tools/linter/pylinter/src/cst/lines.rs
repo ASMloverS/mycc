@@ -115,12 +115,29 @@ pub fn build_lines(tokens: &[LocatedToken], source: &str) -> Vec<CSTLine> {
         });
     }
 
+    // Propagate last seen indent level to blank lines so downstream formatters
+    // (e.g. blank_lines normalize) know the indent context of each blank line.
     let mut last_level = 0usize;
     for line in &mut result {
         if line.is_blank && line.indent.level == 0 {
             line.indent.level = last_level;
         } else if line.indent.level > 0 {
             last_level = line.indent.level;
+        }
+    }
+
+    for i in 0..result.len() {
+        if result[i].indent.level == 0
+            && !result[i].indent.raw.is_empty()
+            && result[i].code.is_empty()
+            && result[i].comment.is_some()
+        {
+            for j in (i + 1)..result.len() {
+                if result[j].indent.level > 0 && !result[j].is_blank {
+                    result[i].indent.level = result[j].indent.level;
+                    break;
+                }
+            }
         }
     }
 

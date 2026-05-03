@@ -1,6 +1,6 @@
 # Task 08: Formatter — indent (AST-aware)
 
-> Status: ⬜ Not started
+> Status: ✅ Done
 > Depends: Task 05
 > Output: Python indent unified to configured `indent_width` spaces (default 4)
 
