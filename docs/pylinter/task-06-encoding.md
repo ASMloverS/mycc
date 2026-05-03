@@ -1,6 +1,6 @@
 # Task 06: Formatter — encoding (UTF-8 + LF + Strip BOM)
 
-> Status: ⬜ Not started
+> Status: ✅ Done
 > Depends: Task 05
 > Output: encoding formatter normalizes encoding/line-endings/BOM
 
@@ -77,7 +77,7 @@ fn converts_crlf_to_lf() {
 fn converts_cr_to_lf() {
     let mut src = SourceFile::from_string("x = 1\ry = 2\r", PathBuf::from("test.py"));
     fix_encoding(&mut src, &FormatConfig::default()).unwrap();
-    assert_eq!(src.content, "x = 1\ny = 2");
+    assert_eq!(src.content, "x = 1\ny = 2\n");
 }
 
 #[test]
