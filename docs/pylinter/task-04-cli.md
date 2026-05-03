@@ -1,6 +1,6 @@
 # Task 04: CLI + File Collect + Ignore
 
-> Status: ⬜ Not started
+> Status: ✅ Done
 > Depends: Task 02, Task 03
 > Output: `cargo run -- <path>` discovers .py files, prints formatted results
 
