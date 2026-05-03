@@ -1,6 +1,6 @@
 # Task 03: Common Module — SourceFile + Diagnostic + string_utils
 
-> Status: ⬜ Not started
+> Status: ✅ Done
 > Deps: Task 01
 > Output: `common` module importable, unit tests pass
 

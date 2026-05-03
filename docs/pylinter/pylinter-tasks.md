@@ -8,7 +8,7 @@ Design: [pylinter-design.md](./pylinter-design.md)
 |---|---|---|---|
 | 01 | [Scaffold — Cargo.toml + main.rs + lib.rs](./task-01-scaffold.md) | — | ✅ Done |
 | 02 | [Config — config.rs + .pylinter.yaml](./task-02-config.md) | 01 | ✅ Done |
-| 03 | [Common — SourceFile + Diagnostic + string_utils](./task-03-common.md) | 01 | ⬜ TODO |
+| 03 | [Common — SourceFile + Diagnostic + string_utils](./task-03-common.md) | 01 | ✅ Done |
 | 04 | [CLI + file collect + ignore](./task-04-cli.md) | 02, 03 | ⬜ TODO |
 | 05 | [CST core — tokenize + parse + CSTSource + regenerate](./task-05-cst-core.md) | 03 | ⬜ TODO |
 | 06 | [Formatter — encoding (UTF-8 + LF + BOM)](./task-06-encoding.md) | 05 | ⬜ TODO |
