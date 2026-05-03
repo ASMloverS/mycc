@@ -2,108 +2,85 @@
 
 ## 鹄的
 
-`sync_config.*` → `tools/`；增跨平台启动脚本；引入 `custom-harness` 机制，agents/commands/bin/skills 按源分目录同步。
+`sync_config.*` → `tools/`；增跨平台启动脚本；立 `custom-harness` 机制；pull/install 双向同步；install-agents 带 model 选。
 
-## 目录（现状）
+## 目次
 
 ```
 mycc/
 ├── tools/
-│   ├── sync_config.py          # 主脚本
-│   └── sync_config.yaml        # 可选配置（源路径、跳过列表）
-├── sync.bat                    # Win11 启动
-├── sync.sh                     # Debian 12 启动
+│   ├── sync_config.py          # 875 行
+│   ├── sync_config.yaml        # 可选配置
+│   └── test_sync_config.py     # pytest 509 行
+├── sync.bat / sync.sh          # 跨平台启动
 ├── custom-harness/
-│   └── claude/                 # ← harness 源：~/.claude/custom-harness/
-│       ├── agents/             # agent markdown 文件
-│       ├── commands/           # command markdown 文件
-│       ├── bin/                # 辅助脚本
-│       ├── skills/             # harness 内 skills
-│       └── registry.yaml
-├── skills/                     # ← ~/.agents/skills/ (非 harness)
-├── CLAUDE.md                   # ← ~/.claude/CLAUDE.md
-├── AGENTS.md                   # ← ~/.config/opencode/AGENTS.md
+│   ├── claude/{agents,commands,bin,CLAUDE.md}
+│   └── opencode/{agents,commands,AGENTS.md}
+├── skills/claude/              # ← ~/.agents/skills/
 └── ...
 ```
 
-## 已完成
+## 已成
 
-### 一、`tools/` 目录 + 文件迁移 ✅
+### 一、tools/ 迁移 ✅
 
-- `tools/sync_config.py` — 主脚本（548 行）
-- `tools/sync_config.yaml` — 可选 YAML 配置
+三文件就位：主脚本、YAML 配置、pytest 测试。
 
-### 二、跨平台启动脚本 ✅
+### 二、启动脚本 ✅
 
-- `sync.bat` — `python "%~dp0tools\sync_config.py" %*`
-- `sync.sh` — `exec python3 "$(dirname "$0")/tools/sync_config.py" "$@"`
+`sync.bat` → `python "%~dp0tools\sync_config.py" %*`
+`sync.sh` → `exec python3 "$(dirname "$0")/tools/sync_config.py" "$@"`
 
-### 三、harness 机制替代原 agents/commands 子目录方案 ✅
+### 三、harness 机制 ✅
 
-原方案：`agents/claude/*.md`、`commands/claude/*` 按源分目录。
-实际方案：引入 `custom-harness` 概念，源端按 `~/.claude/custom-harness/{agents,commands,bin,skills}/` 组织，目标端拷贝至 `custom-harness/{src_key}/{category}/`。
+源端 `~/.{claude,config/opencode}/custom-harness/{agents,commands,bin}/` → 目标端 `custom-harness/{src_key}/{category}/`。
 
-### 四、核心实现细节
+### 四、子命令 ✅
 
-#### 数据模型：四元组
+| 子命令 | 方向 | 用途 |
+|--------|------|------|
+| `pull`（默认） | 用户域 → 项目 | 扫+选+拷 |
+| `install` | 项目 → 用户域 | 装 CLAUDE.md/AGENTS.md |
+| `install-agents` | 项目 → 用户域 | 装 agents + 设 model |
 
-```python
-(path: Path, category: str, src_key: str, from_harness: bool)
-```
+`--install` 向后兼容 → 映射为 `install`。
 
-`from_harness=True` 标识来自源端 `custom-harness/` 子目录的项目。
+### 五、核心
 
-#### a. `_scan_harness()` — harness 扫描
+**四元组**：`(path, category, src_key, from_harness)`
 
-扫描 `{src_root}/custom-harness/`：
-- 子目录（agents/commands/bin 等）→ 按子目录名分类
-- 顶层文件 → 归入 `harness` 类
-- 额外扫描 `{src_root}/skills/` → 归入 `skills`
+**扫描**：
+- `_scan_harness()` — 子目录→分类 `from_harness=True`；顶层→`harness`；`skills/`→`skills` `from_harness=False`
+- `scan_sources()` — 遍源 → harness + config（CLAUDE.md/AGENTS.md）
 
-#### b. `scan_sources()` — 总入口
+**路由 `get_target()`**：
 
-```python
-for src_key, src_root in sources:
-    _scan_harness(src_root, src_key, skip, cats)
-    # claude: CLAUDE.md → config
-    # opencode: AGENTS.md → config
-```
+| 条件 | 目标 |
+|------|------|
+| `from_harness ∧ category=="harness"` | `custom-harness/{src_key}/{name}` |
+| `from_harness` | `custom-harness/{src_key}/{category}/{name}` |
+| `category=="skills"` | `skills/{src_key}/{name}` |
+| `category=="config"` | `custom-harness/{src_key}/{name}` |
+| 余 | `{name}` |
 
-不直接扫描 opencode 的 agents/commands，统一走 harness 路径。
+**Frontmatter**：`parse_frontmatter` → `(meta, body)`；`write_frontmatter` → 改 YAML 字段；`_resolve_model()` — radio 选 model。
 
-#### c. `get_target()` — 按来源路由
+**install**：`scan_install_config()` 扫 `custom-harness/{platform}/{config}` → `install_config()` 带 `_check_overwrite`（同→跳、异→确认）。
 
-```python
-def get_target(src_path, category, src_key="", from_harness=False):
-    if from_harness:
-        if category == "harness":
-            return cwd / "custom-harness" / src_key / name
-        return cwd / "custom-harness" / src_key / category / name
-    if category == "skills":
-        return cwd / "skills" / src_key / name
-    return cwd / name
-```
+**install-agents**：`scan_local_agents()` → 逐 agent 选 model → 写 frontmatter → 装至用户域。`--platform` + `--model` 批设。
 
-#### d. 交互 UI
+**UI**：`_interactive_list()` 统一 checkbox/radio + 滚动条；`emoji_checkbox`/`emoji_radiolist`/`custom_confirm`；`_print_table()` ANSI 彩色表（UTF-8 宽度感知）；跨平台键盘（Win `msvcrt` / Linux `termios`）。
 
-- `emoji_checkbox()` — 上下移动、空格切换、回车确认，含滚动条
-- `custom_confirm()` — 左右切换确认/取消
-- `_print_table()` — 类别/名称/类型/目标路径 表格
-- 跨平台键盘输入（Windows `msvcrt` / Linux `termios`）
-- Windows VT100 转义启用（`_enable_vt100`）
+**余**：`--dry-run` 三子命令通用；`load_config()` YAML 可覆源/跳过；拷前删旧 `agents/`、`commands/`；示大小 + 改时；`_enable_vt100` Win VT100。
 
-#### e. 其他特性
+### 六、测试 ✅
 
-- `--dry-run` 预览模式
-- YAML 配置加载（`load_config`），可选覆盖默认源和跳过列表
-- 拷贝前自动删除旧 `agents/`、`commands/` 目录（`main` 尾段）
-- 显示文件大小（`_fmt_size`）和修改时间
+`TestIterItems`（过滤）、`TestScanSources`（扫描+标记）、`TestGetTarget`（六路由）、`TestBuildTableRow`、`TestCopyItems`（dry-run/实拷）、`TestEndToEnd`（全流程）、`TestScanInstallConfig`（四场景）、`TestInstallConfig`（五行为）。
 
-### 五、`sync_config.yaml` ✅
+### 七、sync_config.yaml ✅
 
-默认源路径 + 跳过列表，与 `DEFAULT_SOURCES`/`DEFAULT_SKIP` 一致。无需改动。
+默认源 + 跳过列表，与代码一致。
 
 ## 不变
 
-- `CLAUDE.md`、`AGENTS.md` 拷贝不改
-- `~/.agents` 源不改
+`~/.agents` 源不改。
