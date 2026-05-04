@@ -21,7 +21,7 @@ Design: [pylinter-design.md](./pylinter-design.md)
 
 | # | Task | Deps | Status |
 |---|---|---|---|
-| 11 | [Formatter — import_sort (isort-style)](./task-11-import-sort.md) | 05, 10 | ⬜ TODO |
+| 11 | [Formatter — import_sort (isort-style)](./task-11-import-sort.md) | 05, 10 | ✅ Done |
 | 12 | [Formatter — comment_style unify](./task-12-comment-style.md) | 05 | ⬜ TODO |
 | 13 | [Formatter — line_length + wrap](./task-13-line-length.md) | 05 | ⬜ TODO |
 | 14 | [Formatter — binary_op line break](./task-14-binary-op.md) | 05 | ⬜ TODO |

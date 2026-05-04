@@ -84,3 +84,19 @@ fn invalid_syntax_passes_through() {
     let input = "= invalid\n";
     assert_formats_to(input, input);
 }
+
+#[test]
+fn import_sorting_in_pipeline() {
+    assert_formats_to(
+        "import requests\nimport sys\nfrom os import path\nfrom os import environ\nimport os\n\ndef foo():\n    pass\n",
+        "import os\nfrom os import environ, path\nimport sys\n\nimport requests\n\n\ndef foo():\n    pass\n",
+    );
+}
+
+#[test]
+fn import_sorting_multiline_in_pipeline() {
+    assert_formats_to(
+        "import sys\nfrom os import (\n    path,\n    environ,\n)\nimport requests\n",
+        "from os import environ, path\nimport sys\n\nimport requests\n",
+    );
+}

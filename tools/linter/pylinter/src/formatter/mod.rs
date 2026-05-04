@@ -1,5 +1,6 @@
 pub mod blank_lines;
 pub mod encoding;
+pub mod import_sort;
 pub mod indent;
 pub mod trailing_ws;
 
@@ -16,6 +17,7 @@ pub fn format_source(
     if let Ok(mut cst) = CSTSource::parse(&source.content) {
         indent::fix_indent(&mut cst, config).map_err(|e| e.to_string())?;
         blank_lines::fix_blank_lines(&mut cst, config).map_err(|e| e.to_string())?;
+        import_sort::fix_import_sort(&mut cst, config).map_err(|e| e.to_string())?;
         trailing_ws::fix_trailing_ws(&mut cst, config).map_err(|e| e.to_string())?;
         source.content = cst.regenerate();
     }

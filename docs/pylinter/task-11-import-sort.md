@@ -1,6 +1,6 @@
 # Task 11: Formatter — import_sort (PEP 8 / isort)
 
-> Status: ⬜ Not started
+> Status: ✅ Done
 > Depends: Task 05, Task 10
 > Output: imports sorted stdlib → third-party → local
 
