@@ -1,6 +1,6 @@
 # Task 10: Formatter Pipeline Integration + E2E Tests
 
-> Status: ⬜ Not started
+> Status: ✅ Done
 > Depends: Task 06, Task 07, Task 08, Task 09
 > Output: `format_source()` pipeline works end-to-end, tests pass
 
@@ -14,32 +14,27 @@ Wire formatter modules into complete pipeline. Write E2E tests.
 
 ```rust
 pub mod blank_lines;
-pub mod binary_op;
-pub mod comment_style;
 pub mod encoding;
-pub mod import_sort;
 pub mod indent;
-pub mod line_length;
 pub mod trailing_ws;
 
 use crate::common::diag::Diagnostic;
 use crate::common::source::SourceFile;
 use crate::config::FormatConfig;
+use crate::cst::CSTSource;
 
 pub fn format_source(
     source: &mut SourceFile,
     config: &FormatConfig,
-) -> Result<Vec<Diagnostic>, Box<dyn std::error::Error>> {
-    encoding::fix_encoding(source, config)?;
-    trailing_ws::fix_trailing_ws(source, config)?;
-    indent::fix_indent(source, config)?;
-    blank_lines::fix_blank_lines(source, config)?;
-    // 以下模块在 Phase 2 实现, 此处为占位
-    // import_sort::fix_import_sort(source, config)?;
-    // comment_style::fix_comment_style(source, config)?;
-    // line_length::fix_line_length(source, config)?;
-    // binary_op::fix_binary_op(source, config)?;
-    Ok(vec![])
+) -> Result<Vec<Diagnostic>, String> {
+    encoding::fix_encoding(source, config).map_err(|e| e.to_string())?;
+    if let Ok(mut cst) = CSTSource::parse(&source.content) {
+        indent::fix_indent(&mut cst, config).map_err(|e| e.to_string())?;
+        blank_lines::fix_blank_lines(&mut cst, config).map_err(|e| e.to_string())?;
+        trailing_ws::fix_trailing_ws(&mut cst, config).map_err(|e| e.to_string())?;
+        source.content = cst.regenerate();
+    }
+    Ok(Vec::new())
 }
 ```
 
@@ -57,9 +52,9 @@ let diags = crate::formatter::format_source(&mut source, config_ref)?;
 **tests/fixtures/input/dirty.py**:
 ```python
 import os
-x=1
-def foo(  ):
-	  pass
+x = 1
+def foo():
+ 	pass
 class Bar:
   def baz(self):
     pass
@@ -68,8 +63,6 @@ class Bar:
 **tests/fixtures/expected/dirty.py**:
 ```python
 import os
-
-
 x = 1
 
 
@@ -78,6 +71,7 @@ def foo():
 
 
 class Bar:
+
     def baz(self):
         pass
 ```

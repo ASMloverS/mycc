@@ -15,7 +15,7 @@ Design: [pylinter-design.md](./pylinter-design.md)
 | 07 | [Formatter — trailing whitespace removal](./task-07-trailing-ws.md) | 05 | ✅ Done |
 | 08 | [Formatter — indent](./task-08-indent.md) | 05 | ✅ Done |
 | 09 | [Formatter — blank_lines normalize](./task-09-blank-lines.md) | 05, 08 | ✅ Done |
-| 10 | [Formatter pipeline + E2E tests](./task-10-formatter-pipeline.md) | 06~09 | ⬜ TODO |
+| 10 | [Formatter pipeline + E2E tests](./task-10-formatter-pipeline.md) | 06~09 | ✅ Done |
 
 ## Phase 2: Advanced Formatting + All Checkers
 
