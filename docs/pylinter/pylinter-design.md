@@ -111,8 +111,8 @@ struct LocatedToken {
 Same as cclinter `format_source`:
 
 ```
-encoding → trailing_ws → indent → blank_lines → import_sort
-→ comment_style → line_length → binary_op → generate
+encoding → indent → blank_lines → import_sort
+→ comment_style → line_length → trailing_ws → binary_op → generate
 ```
 
 ## 3. Deps

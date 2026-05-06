@@ -1,6 +1,6 @@
 # Task 13: Formatter — line_length wrap (token-aware)
 
-> Status: ⬜ Not started
+> Status: ✅ Done
 > Depends: Task 05
 > Output: long lines wrap at token boundary
 

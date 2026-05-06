@@ -3,6 +3,7 @@ pub mod comment_style;
 pub mod encoding;
 pub mod import_sort;
 pub mod indent;
+pub mod line_length;
 pub mod trailing_ws;
 
 use crate::common::diag::Diagnostic;
@@ -20,6 +21,7 @@ pub fn format_source(
         blank_lines::fix_blank_lines(&mut cst, config).map_err(|e| e.to_string())?;
         import_sort::fix_import_sort(&mut cst, config).map_err(|e| e.to_string())?;
         comment_style::fix_comment_style(&mut cst, config).map_err(|e| e.to_string())?;
+        line_length::fix_line_length(&mut cst, config).map_err(|e| e.to_string())?;
         trailing_ws::fix_trailing_ws(&mut cst, config).map_err(|e| e.to_string())?;
         source.content = cst.regenerate();
     }
