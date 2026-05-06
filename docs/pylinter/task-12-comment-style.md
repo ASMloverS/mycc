@@ -1,6 +1,6 @@
 # Task 12: Formatter — comment_style
 
-> Status: ⬜ Not started
+> Status: ✅ Done
 > Depends: Task 05
 > Output: All comments `#` style, normalized
 
