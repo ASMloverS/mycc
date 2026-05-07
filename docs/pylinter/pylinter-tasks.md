@@ -27,7 +27,7 @@ Design: [pylinter-design.md](./pylinter-design.md)
 | 14 | [Formatter — binary_op line break](./task-14-binary-op.md) | 05 | ✅ Done |
 | 15 | [Checker — naming](./task-15-checker-naming.md) | 05 | ✅ Done |
 | 16 | [Checker — complexity](./task-16-checker-complexity.md) | 05 | ✅ Done |
-| 17 | [Checker — magic_number](./task-17-checker-magic-number.md) | 05 | ⬜ TODO |
+| 17 | [Checker — magic_number](./task-17-checker-magic-number.md) | 05 | ✅ Done |
 | 18 | [Checker — unused_import](./task-18-checker-unused-import.md) | 05 | ⬜ TODO |
 | 19 | [Checker — prohibited fn/modules](./task-19-checker-prohibited.md) | 05 | ⬜ TODO |
 | 20 | [Checker — docstring](./task-20-checker-docstring.md) | 05 | ⬜ TODO |

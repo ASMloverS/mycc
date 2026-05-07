@@ -15,6 +15,7 @@ globset = "0.4"
 colored = "2"
 similar = "2"
 rustpython-parser = { version = "0.3", features = ["full-lexer"] }
+num-traits = "0.2"
 
 [dev-dependencies]
 tempfile = "3"
