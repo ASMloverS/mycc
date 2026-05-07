@@ -1,6 +1,6 @@
 # Task 15: Checker — naming 命名检查 (AST-based)
 
-> 状态: ⬜ 未开始
+> 状态: ✅ 已完成
 > 依赖: Task 05
 > 产出: configurable PEP 8 naming check → Diagnostic
 
