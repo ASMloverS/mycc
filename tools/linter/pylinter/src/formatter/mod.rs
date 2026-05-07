@@ -1,3 +1,4 @@
+pub mod binary_op;
 pub mod blank_lines;
 pub mod comment_style;
 pub mod encoding;
@@ -23,6 +24,7 @@ pub fn format_source(
         comment_style::fix_comment_style(&mut cst, config).map_err(|e| e.to_string())?;
         line_length::fix_line_length(&mut cst, config).map_err(|e| e.to_string())?;
         trailing_ws::fix_trailing_ws(&mut cst, config).map_err(|e| e.to_string())?;
+        binary_op::fix_binary_op(&mut cst, config).map_err(|e| e.to_string())?;
         source.content = cst.regenerate();
     }
     Ok(Vec::new())
