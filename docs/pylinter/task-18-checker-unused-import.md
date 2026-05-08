@@ -1,6 +1,6 @@
 # Task 18: Checker — unused_import (AST-based)
 
-> Status: ⬜ Not started
+> Status: ✅ Done
 > Depends: Task 05
 > Output: Detect imported-but-unused modules/names
 
