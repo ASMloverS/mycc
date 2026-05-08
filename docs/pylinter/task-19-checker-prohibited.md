@@ -1,6 +1,6 @@
 # Task 19: Checker — Prohibited 禁止函数/模块 (AST-based)
 
-> Status: ⬜ Not started
+> Status: ✅ Done
 > Deps: Task 05
 > Output: Detect prohibited fn/module calls
 
