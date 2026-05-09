@@ -1,6 +1,6 @@
 # Task 20: Checker — docstring (AST-based)
 
-> Status: ⬜ Not started
+> Status: ✅ Done
 > Depends: Task 05
 > Output: Check module/class/fn docstring presence
 

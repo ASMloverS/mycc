@@ -1,4 +1,5 @@
 pub mod complexity;
+pub mod docstring;
 pub mod magic_number;
 pub mod naming;
 pub mod prohibited;
@@ -15,5 +16,6 @@ pub fn check_source(source: &SourceFile, config: &CheckConfig) -> Vec<Diagnostic
     diags.extend(magic_number::check_magic_number(source, &config.magic_number));
     diags.extend(unused_import::check_unused_import(source, &config.unused_import));
     diags.extend(prohibited::check_prohibited(source, &config.prohibited));
+    diags.extend(docstring::check_docstring(source, &config.docstring));
     diags
 }
