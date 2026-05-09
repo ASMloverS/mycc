@@ -31,7 +31,7 @@ Design: [pylinter-design.md](./pylinter-design.md)
 | 18 | [Checker — unused_import](./task-18-checker-unused-import.md) | 05 | ✅ Done |
 | 19 | [Checker — prohibited fn/modules](./task-19-checker-prohibited.md) | 05 | ✅ Done |
 | 20 | [Checker — docstring](./task-20-checker-docstring.md) | 05 | ✅ Done |
-| 21 | [Checker pipeline + Phase 2 formatter wrap-up](./task-21-checker-pipeline.md) | 10~20 | ⬜ TODO |
+| 21 | [Checker pipeline + Phase 2 formatter wrap-up](./task-21-checker-pipeline.md) | 10~20 | ✅ Done |
 
 ## Phase 3: Analyzers
 

@@ -1,6 +1,6 @@
 # Task 21: Checker Pipeline Integration + Phase 2 Formatter Completion
 
-> Status: ⬜ Not started
+> Status: ✅ Done
 > Depends on: Task 10–20
 > Output: Complete format + check pipeline, checker wired in cli.rs
 

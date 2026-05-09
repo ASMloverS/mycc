@@ -203,7 +203,7 @@ fn print_new_diags(
     for diag in diags {
         let key = (diag.file.clone(), diag.line, diag.rule_id.clone());
         if seen.insert(key) && (verbose || !quiet) {
-                eprintln!("{diag}");
+            eprintln!("{diag}");
         }
     }
 }
