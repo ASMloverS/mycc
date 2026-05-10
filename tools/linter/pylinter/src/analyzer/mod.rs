@@ -2,6 +2,12 @@ use crate::common::diag::Diagnostic;
 use crate::common::source::SourceFile;
 use crate::config::{AnalysisConfig, AnalysisLevel};
 
-pub fn analyze_source(_source: &SourceFile, _level: &AnalysisLevel, _config: &AnalysisConfig) -> Vec<Diagnostic> {
-    Vec::new()
+mod basic;
+
+pub fn analyze_source(source: &SourceFile, level: &AnalysisLevel, config: &AnalysisConfig) -> Vec<Diagnostic> {
+    match level {
+        AnalysisLevel::None => vec![],
+        AnalysisLevel::Basic => basic::check(source, config),
+        AnalysisLevel::Strict | AnalysisLevel::Deep => basic::check(source, config),
+    }
 }

@@ -37,7 +37,7 @@ Design: [pylinter-design.md](./pylinter-design.md)
 
 | # | Task | Deps | Status |
 |---|---|---|---|
-| 22 | [Analyzer — basic (common pitfalls)](./task-22-analyzer-basic.md) | 05 | ⬜ TODO |
+| 22 | [Analyzer — basic (common pitfalls)](./task-22-analyzer-basic.md) | 05 | ✅ Done |
 | 23 | [Analyzer — strict (code quality)](./task-23-analyzer-strict.md) | 05 | ⬜ TODO |
 | 24 | [Analyzer — deep](./task-24-analyzer-deep.md) | 05 | ⬜ TODO |
 | 25 | [Analyzer pipeline + full E2E tests](./task-25-analyzer-pipeline.md) | 21~24 | ⬜ TODO |

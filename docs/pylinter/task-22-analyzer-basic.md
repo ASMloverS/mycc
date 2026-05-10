@@ -1,6 +1,6 @@
 # Task 22: Analyzer — basic Level (Common Pitfalls)
 
-> Status: ⬜ Not started
+> Status: ✅ Done
 > Depends: Task 05
 > Output: basic level analysis rules: mutable default args, missing self, bare except, == None
 
