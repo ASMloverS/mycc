@@ -4,14 +4,21 @@ use crate::config::{AnalysisConfig, AnalysisLevel};
 
 mod basic;
 mod strict;
+mod deep;
 
 pub fn analyze_source(source: &SourceFile, level: &AnalysisLevel, config: &AnalysisConfig) -> Vec<Diagnostic> {
     match level {
         AnalysisLevel::None => vec![],
         AnalysisLevel::Basic => basic::check(source, config),
-        AnalysisLevel::Strict | AnalysisLevel::Deep => {
+        AnalysisLevel::Strict => {
             let mut diags = basic::check(source, config);
             diags.extend(strict::check(source, config));
+            diags
+        }
+        AnalysisLevel::Deep => {
+            let mut diags = basic::check(source, config);
+            diags.extend(strict::check(source, config));
+            diags.extend(deep::check(source, config));
             diags
         }
     }
