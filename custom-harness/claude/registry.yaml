@@ -8,6 +8,8 @@ agents:
   doc-fixer:        { path: agents/doc-fixer.md,        desc: "Fixes doc vulnerabilities and contradictions" }
   doc-reviewer:     { path: agents/doc-reviewer.md,     desc: "Read-only doc auditor for gaps/risks" }
   vsc-committer:    { path: agents/vsc-committer.md,    desc: "Git/SVN add+commit w/ smart filtering, gitmoji (git) / plain (svn) msg, optional push" }
+  code-simplifier:  { path: agents/code-simplifier.md,  desc: "Multi-phase code simplification: scope→simplify→test→review→fix-loop" }
+  simplify-runner:  { path: agents/simplify-runner.md,  desc: "Apply simplify skill + heuristic test run on a given file set" }
 
 skills:
   doc-refine:        { path: skills/doc-refine/SKILL.md,        desc: "Ultra-compress docs (EN caveman / CN 文言文)" }
