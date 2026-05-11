@@ -1,6 +1,6 @@
 # Task 25: Analyzer Pipeline Integration + CLI Wiring + E2E Tests
 
-> Status: ⬜ Not started
+> Status: ✅ Done
 > Depends on: Task 21, Task 22, Task 23, Task 24
 > Output: Complete format + check + analyze pipeline, all features E2E usable
 
