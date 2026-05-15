@@ -77,8 +77,16 @@ fn main() {
 
     if clean.is_empty() { payload::print_help(&reg, &harness, None); return; }
 
-    let user_prompt = clean[1..].join(" ");
-    let p = payload::build_payload(&reg, &harness, &clean[0], &user_prompt,
+    // Fallback: LLM may bundle "<name> <prompt>" into one quoted argv → split at first whitespace.
+    let (name_tok, user_prompt) = if clean.len() == 1 {
+        match clean[0].split_once(char::is_whitespace) {
+            Some((n, p)) => (n.to_string(), p.trim_start().to_string()),
+            None => (clean[0].clone(), String::new()),
+        }
+    } else {
+        (clean[0].clone(), clean[1..].join(" "))
+    };
+    let p = payload::build_payload(&reg, &harness, &name_tok, &user_prompt,
         model.as_deref(), bg, inline, &mut md_cache)
         .unwrap_or_else(|e| die(&e.to_string(), err_code(&e)));
     let out = payload::Output { mode: "single", payloads: vec![p] };

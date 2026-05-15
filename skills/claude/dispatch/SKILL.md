@@ -13,6 +13,10 @@ If `<prompt>` is omitted, the agent receives an empty `User Input` block — age
 
 `--inline`: embed the full MD body directly in the subagent prompt instead of using a thin pointer. Use for debugging or behavior comparison only; default is thin-pointer mode.
 
+**Argv rule**: pass `<name|type:name>` as the **first separate argument**; prompt words follow as additional args. Never merge name and prompt into one quoted string.
+- Correct: `dispatch dev-cycle: '@docs\features\opt\index.md' OPT-04`
+- Wrong:   `dispatch "dev-cycle: @docs\features\opt\index.md OPT-04"` ← entire string becomes the name token → Not found
+
 Parallel: `/dispatch --parallel "name1 prompt1" "name2 prompt2" …` [`--model M`] [`--bg`]
 Each quoted token: first word = name, rest = prompt.
 
