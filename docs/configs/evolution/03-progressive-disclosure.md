@@ -27,7 +27,9 @@
 
 ## 具体变更
 
-### 1. Precision Editing Protocol → 独立 skill
+### 1. Precision Editing Protocol → cc-skill
+
+> **类型**：cc-skill（依 description 自动触发，不进 harness registry，不需要 `/dispatch`）
 
 创建 `~/.claude/skills/precision-editing/SKILL.md`：
 
@@ -57,17 +59,21 @@ description: Enforces surgical editing protocol with 100-line rule, locate-windo
 - No blind overwrites: Grep/Read before writing.
 ```
 
-### 2. Git Commit Convention → 一行指针
+### 2. Git Commit Convention → 保留原位（不下沉）
 
-将当前 4 行替换为：
+**不移出 CLAUDE.md。** 理由：vsc-committer 是可选路径，commit convention 是兜底约束；若用户绕过 `/dispatch` 直接 `git commit`，Claude 仍需知道格式规则和红线。两者拆开会失防。
+
+当前 4 行原样保留，仅补一行指针：
 
 ```markdown
 ## Git Commit Convention
-- Use gitmoji format: `gitmoji type(scope): desc` — delegate to vsc-committer agent via `/dispatch vsc-committer`
+- gitmoji format: `gitmoji type(scope): desc`
+- gitmoji mapping: feat/new→✨ fix→🐛 docs→📝 style→🎨 refactor→♻️ perf→⚡ test→✅ build→📦 ci→👷 chore→🔧 remove→🔥 wip→🚧
 - Never append `Co-Authored-By: Claude ...`
+- 复杂多文件提交 → `/dispatch vsc-committer`
 ```
 
-### 3. 瘦身后的 CLAUDE.md 结构（约 60 行）
+### 3. 瘦身后的 CLAUDE.md 结构（约 70 行）
 
 ```markdown
 # User-Level CLAUDE.md
@@ -87,24 +93,23 @@ Behavioral guidelines to reduce common LLM coding mistakes.
 [保留不变]
 
 ## Git Commit Convention
-- Use gitmoji format, delegate to `/dispatch vsc-committer`
-- Never append `Co-Authored-By: Claude ...`
+[保留完整 4 行，见上方 §2]
 ```
 
-> 注：实际行数取决于当前 CLAUDE.md 的版本，移出 Precision Editing Protocol（~17 行）和精简 Git Commit Convention（~4 行→2 行）后，预计减少约 20 行。目标上限 200 行，当前 85 行远未触及。
+> 注：移出 Precision Editing Protocol（~17 行）后预计减少约 17 行。目标上限 200 行，当前 85 行远未触及。Git Commit Convention 保留原位不变。
 
 ## 渐进式披露层级
 
 ```
-~/.claude/CLAUDE.md（约 60 行，每次加载）
+~/.claude/CLAUDE.md（约 70 行，每次加载）
   │
-  ├── Auto Memory / MEMORY.md     ← 自动加载（经验、纠正、项目上下文）
+  ├── Auto Memory / MEMORY.md          ← 自动加载（经验、纠正、项目上下文）
   │
-  ├── ~/.claude/skills/precision-editing/SKILL.md   ← 编辑时触发
-  ├── ~/.claude/skills/claudemd-evolution/SKILL.md  ← 手动触发
-  └── ...其他 skills
+  ├── ~/.claude/skills/precision-editing/SKILL.md    ← cc-skill：编辑时自动触发
+  ├── ~/.agents/skills/claudemd-evolution/SKILL.md   ← harness-skill：/dispatch 手动触发
+  └── ...其他 cc-skill / harness-skill
   │
-  └── 项目根/CLAUDE.md        ← 进入项目时自动加载
+  └── 项目根/CLAUDE.md          ← 进入项目时自动加载
 ```
 
 ## 收益

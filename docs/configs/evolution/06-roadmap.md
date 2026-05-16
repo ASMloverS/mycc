@@ -22,7 +22,9 @@ Week 2: 阶段 3
   └── 验证：正常编辑任务仍然遵循 precision editing 规则
 
 Week 3: 阶段 4
-  ├── 创建 ~/.claude/skills/claudemd-evolution/SKILL.md
+  ├── 创建 ~/.agents/skills/claudemd-evolution/SKILL.md
+  ├── 建软链：~/.claude/custom-harness/skills/claudemd-evolution
+  ├── 注册到 registry.yaml + git 同步
   └── 试运行：/dispatch claudemd-evolution
 
 Week 4: 阶段 5
@@ -35,9 +37,10 @@ Week 4: 阶段 5
 ## 验证清单
 
 ### 阶段 1 验证
-- [ ] 完成一个会话后，Stop hook 正常触发
-- [ ] hook 返回 `{"systemMessage": "..."}` 时，建议出现在会话末尾
+- [ ] `claude --debug` 启动，结束会话后在 debug 输出中确认 Stop hook 触发记录
+- [ ] hook 返回 `{"systemMessage": "..."}` 时，建议在会话末尾可见
 - [ ] 建议内容具体且可操作（非泛泛而谈）
+- [ ] 用 `jq` 验证 hook 输出合法：`echo '{"systemMessage":"test"}' | jq .`（期望无报错）
 
 ### 阶段 2 验证
 - [ ] `~/.claude/projects/<slug>/memory/MEMORY.md` 存在
@@ -50,8 +53,9 @@ Week 4: 阶段 5
 - [ ] Git commit 委托给 vsc-committer 正常工作
 
 ### 阶段 4 验证
-- [ ] `/dispatch claudemd-evolution` 正常执行
-- [ ] 输出结构化提案（REMOVE/SIMPLIFY/RELOCATE/ADD）
+- [ ] `/dispatch --help claudemd-evolution` 显示 desc 字段（确认 registry 注册成功）
+- [ ] `/dispatch claudemd-evolution` 在空 Auto Memory 项目下输出 `"no Auto Memory found"` 并退出
+- [ ] 在有 Auto Memory 的项目下输出结构化提案（REMOVE/SIMPLIFY/RELOCATE/ADD）
 - [ ] 用户确认后才修改 CLAUDE.md
 
 ### 阶段 5 验证
@@ -64,6 +68,15 @@ Week 4: 阶段 5
 - command hook 显式声明 `"shell": "bash"` 确保在 Git Bash 环境中运行
 - 文件路径使用 `~/.claude/` 在 Claude Code 的 bash 环境中正常解析
 - JSON 输出（`hookSpecificOutput.additionalContext`）通过 `echo '...'` 输出，注意 Windows bash 中使用单引号包裹
+
+**故障排查**：
+
+| 症状 | 排查步骤 |
+|---|---|
+| Stop hook 无任何输出 | `claude --debug` 启动，检查 debug 日志中 `hooks` 相关条目 |
+| JSON 解析失败 / 静默跳过 | 手动运行 hook command，确认 stdout 为合法 JSON（`echo '...' | jq .`） |
+| `echo '...'` 单引号失效（Windows）| 改用 `printf '%s' '...'`，或切换为 PowerShell hook（`"shell": "powershell"`，JSON 用双引号 + 转义） |
+| hook 有输出但 systemMessage 不显示 | 确认 CC 版本 ≥ 2.1.59；用 `claude --debug` 确认 Stop 事件是否触发 prompt hook |
 
 ## 合并后的 settings.json hooks 配置
 
@@ -105,7 +118,7 @@ Week 4: 阶段 5
 | 阶段 1 (Stop Hook) | 从 `settings.json` 移除 `hooks.Stop` 段 |
 | 阶段 2 (Auto Memory) | 无需回滚（内置功能，不影响其他配置） |
 | 阶段 3 (瘦身) | 将 precision-editing 内容还原到 `CLAUDE.md`，删除 skill 目录 |
-| 阶段 4 (Evolution Skill) | 删除 `~/.claude/skills/claudemd-evolution/` 目录 |
+| 阶段 4 (Evolution Skill) | 删除 `~/.agents/skills/claudemd-evolution/`，移除软链，从 registry.yaml 删除注册项 |
 | 阶段 5 (SessionStart Hook) | 从 `settings.json` 移除 `hooks.SessionStart` 段 |
 
 ## 潜在风险

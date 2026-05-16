@@ -6,7 +6,10 @@
 
 ## Skill 定义
 
-位置：`~/.claude/skills/claudemd-evolution/SKILL.md`
+> **类型**：harness-skill（手动 `/dispatch claudemd-evolution` 触发，不自动加载）
+
+**真身位置**：`~/.agents/skills/claudemd-evolution/SKILL.md`
+**软链**：`~/.claude/custom-harness/skills/claudemd-evolution` → `~/.agents/skills/claudemd-evolution`
 
 ```yaml
 ---
@@ -25,8 +28,19 @@ the user's CLAUDE.md based on accumulated evidence.
 
 ## Step 1: Gather evidence
 
+首先通过 Bash 推导 project-slug（CC 内部规则：去驱动器号 + 分隔符替换为 `-`）：
+
+```bash
+PROJECT_DIR="$(pwd)"
+PROJECT_SLUG="$(echo "$PROJECT_DIR" | sed -e 's|^[A-Za-z]:||' -e 's|[/\\]|-|g' -e 's|^-||')"
+# 例：C:/Workspace/Repositories/mycc → C--Workspace-Repositories-mycc（去掉驱动器后首字符是 -，再去掉）
+MEMORY_DIR="$HOME/.claude/projects/$PROJECT_SLUG/memory"
+```
+
+若 `$MEMORY_DIR` 不存在，输出 `"no Auto Memory found for this project"` 并终止。
+
 Read these files in order:
-1. `~/.claude/projects/<current-project-slug>/memory/MEMORY.md` (Auto Memory index)
+1. `$MEMORY_DIR/MEMORY.md` (Auto Memory index)
 2. Individual feedback_*.md and project_*.md files referenced in MEMORY.md
 3. `~/.claude/CLAUDE.md` (current rules)
 
@@ -47,7 +61,7 @@ Classification heuristics:
 - If the rule is only relevant to specific tasks → candidate RELOCATE to skill
 - If feedback memory has a pattern with ≥ 3 entries and no matching rule → candidate ADD
 
-> 注：同类 feedback 出现 ≥ 2 次标记为"候选"，≥ 3 次正式提议晋升。两级过滤一次性噪声。
+> 注：候选阈值与晋升阈值定义见 [00-overview.md §不变量](00-overview.md)，本文件不再复述。
 
 ## Step 3: Propose additions from memory
 
@@ -102,6 +116,32 @@ metadata:
 - ADDED: "[rule]" (feedback count: 3)
 - SIMPLIFIED: [section] → [summary]
 ```
+```
+
+## 注册到 dispatch
+
+创建 SKILL.md 后，必须注册到 `registry.yaml` 才能通过 `/dispatch` 调用：
+
+```bash
+# 1. 创建真身目录
+mkdir -p ~/.agents/skills/claudemd-evolution
+
+# 2. 建软链（供 harness 查表）
+ln -s ~/.agents/skills/claudemd-evolution \
+      ~/.claude/custom-harness/skills/claudemd-evolution
+
+# 3. 编辑 registry.yaml，在 skills: 段追加：
+#    claudemd-evolution:
+#      path: skills/claudemd-evolution/SKILL.md
+#      desc: "Evolve CLAUDE.md from Auto Memory evidence"
+
+# 4. 同步到 git 跟踪仓库
+cp ~/.claude/custom-harness/registry.yaml \
+   C:/Workspace/Repositories/mycc/custom-harness/claude/registry.yaml
+# （提交走 vsc-committer）
+
+# 5. 验证注册成功
+/dispatch --help claudemd-evolution
 ```
 
 ## 使用方式

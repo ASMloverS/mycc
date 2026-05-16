@@ -40,10 +40,10 @@
 | hook 返回 | 效果 |
 |---|---|
 | `{}` | 会话正常结束，无动作 |
-| `{"systemMessage": "..."}` | suggestion 作为系统消息注入当前会话末尾，用户可见 |
+| `{"systemMessage": "..."}` | Stop hook 在会话真正关闭前触发；suggestion 在会话末尾显示给用户 |
 | 非 JSON 或解析失败 | 静默跳过，不阻塞会话结束 |
 
-注意：`systemMessage` 字段是官方支持的注入机制。用户看到建议后，需手动指示 Claude 将其写入 Auto Memory（`feedback` 类型）。
+注意：`systemMessage` 是 CC hooks 协议中 Stop 事件支持的注入字段。用户看到建议后，需手动指示 Claude 将其写入 Auto Memory（`feedback` 类型）。首次配置后建议用 `claude --debug` 验证 hook 是否正常触发（参见 [06-roadmap.md §阶段 1 验证](06-roadmap.md)）。
 
 ## 工作流
 

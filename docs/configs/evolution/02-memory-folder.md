@@ -76,14 +76,13 @@ Windows 环境下使用 `python -m pytest` 而非 `pytest`（路径问题）。
 会话结束 → Stop hook 建议
   ↓ 用户确认值得记录
 Auto Memory（feedback/project type）
-  ↓ 同类 feedback 出现 ≥ 2 次（候选）
-  ↓ 出现 ≥ 3 次且非项目特有
+  ↓ 达到候选阈值 / 晋升阈值（定义见 00-overview.md §不变量）
 /dispatch claudemd-evolution → 晋升为 CLAUDE.md 规则
 ```
 
-**晋升标准**：
-- 同类 feedback memory 积累 ≥ 2 条时，标记为"候选晋升"
-- ≥ 3 条且确认跨项目通用 → 晋升至用户级 `~/.claude/CLAUDE.md`
+**晋升标准**（阈值见 [00-overview.md §不变量](00-overview.md)）：
+- 达到候选阈值 → 标记为"候选晋升"
+- 达到晋升阈值且跨项目通用 → 晋升至用户级 `~/.claude/CLAUDE.md`
 - 项目特有 → 保留为 `project` 类型 memory，或写入项目级 CLAUDE.md
 - 模型版本特定的行为（模型升级后可能消失）→ 记录为 `project` type，注明版本
 
@@ -92,12 +91,28 @@ Auto Memory（feedback/project type）
 ```bash
 # 查看当前项目 memory
 /memory
-
-# 告知 Claude 保存一条 feedback
-"请把这个纠正保存到 Auto Memory 作为 feedback 类型"
-
-# Claude 自动写入 MEMORY.md + 对应分类文件
 ```
+
+**写入模板**（可直接复制给 Claude）：
+
+```
+请把下面这条保存为 Auto Memory 的 <feedback|project|reference> 类型：
+title: <短标题>
+body: <详细说明>
+why: <为何记录>
+apply: <何时应用>
+```
+
+例：
+```
+请把下面这条保存为 Auto Memory 的 feedback 类型：
+title: Windows 下使用 python -m pytest
+body: Windows 环境下用 `python -m pytest` 而非 `pytest`（PATH 问题）
+why: pytest 未加入 PATH 导致命令找不到
+apply: 所有 Python 测试执行命令
+```
+
+> **name 字段规范**：YAML frontmatter 中 `name:` 使用 kebab-case（如 `feedback-build-command`）；磁盘上的文件名由 CC 自动生成（使用下划线，如 `feedback_build_command.md`），无需用户手动指定。
 
 ## 与 CLAUDE.md 的关系
 
