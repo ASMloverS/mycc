@@ -19,9 +19,8 @@ mycc/
 │   └── opencode/                   # OpenCode harness: AGENTS.md
 ├── skills/claude/                  # Claude skill dispatch
 ├── docs/
-│   ├── harness-design.md
-│   ├── dispatch-optimization.md
-│   ├── harness-stabilization.md
+│   ├── harness/                    # harness design + optimization docs
+│   ├── configs/                    # config evolution + permissions docs
 │   ├── cclinter/                   # cclinter design + task docs
 │   └── pylinter/                   # pylinter design + task docs
 ├── sync.bat / sync.sh              # sync_config launchers (Win / Unix)
@@ -84,7 +83,7 @@ Rust-based Python 3.14+ linter at `tools/linter/pylinter/`.
 
 ### Status
 
-Phase 1 scaffold + core formatting in progress (7/10 tasks done). See `docs/pylinter/pylinter-tasks.md`.
+All three phases complete (10 formatting tasks, 11 checker tasks, 5 analyzer tasks). See `docs/pylinter/pylinter-tasks.md`.
 
 ### Build & Test
 
