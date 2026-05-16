@@ -1,0 +1,17 @@
+# Permissions Tasks
+
+- ⬜ 01 [创建 tools/perms-update.recipe.json](task-01-recipe-json.md)
+- ⬜ 02 [创建 tools/perms-update.py](task-02-perms-script.md)
+- ⬜ 03 [脚本 CLI 四步冒烟测试](task-03-script-smoke.md)
+- ⬜ 04 [输出 JSON 合法性校验](task-04-json-valid.md)
+- ⬜ 05 [deny — git 危险操作](task-05-deny-git.md)
+- ⬜ 06 [deny — 文件递归/强制删除](task-06-deny-files.md)
+- ⬜ 07 [deny — 网络管道执行 & 任意脚本执行](task-07-deny-network-exec.md)
+- ⬜ 08 [deny — 全局/系统安装](task-08-deny-install.md)
+- ⬜ 09 [deny — 凭据/密钥泄露 & 敏感路径写保护](task-09-deny-creds.md)
+- ⬜ 10 [PowerShell 别名 normalize 验证](task-10-ps-aliases.md)
+- ⬜ 11 [allow 通畅性回归](task-11-allow-regression.md)
+- ⬜ 12 [跨平台验证 (Debian 12 WSL)](task-12-cross-platform.md)
+- ⬜ 13 [脚本失败路径处理](task-13-failure-paths.md)
+- ⬜ 14 [settings.local.json 不被破坏](task-14-local-preserve.md)
+- ⬜ 15 [自动化回归测试套件（可选）](task-15-auto-tests.md)
