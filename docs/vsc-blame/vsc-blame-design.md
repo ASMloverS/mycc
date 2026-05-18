@@ -73,6 +73,8 @@ Options:
 
 No subcommand defaults to blame: `vsc-blame foo.py:10` == `vsc-blame blame foo.py:10`.
 
+`FILE:START-END` is a **closed interval [START, END], 1-based**; internally stored as `LineSpec::Range(START, END)`.
+
 ### traceback
 
 ```
@@ -102,38 +104,58 @@ Options:
 ## 3. Core data structures
 
 ```rust
+enum VcsKind { Git, Svn }
+
+enum LineSpec {
+    All,
+    Single(usize),
+    Range(usize, usize),        // closed [start, end], 1-based
+    Multi(Vec<(usize, usize)>), // multiple segments for traceback / diff
+}
+
 struct BlameEntry {
     file: String,
     line: usize,
     author: String,
     author_mail: String,
     author_time: NaiveDateTime,
-    commit: String,       // git: hash, svn: revision
+    vcs: VcsKind,
+    commit_id: String,    // git: 40-hex hash; svn: revision number string
     summary: String,      // commit message summary
     content: String,      // source line content
 }
 
 struct BlameResult {
     entries: Vec<BlameEntry>,
+    summary: Vec<AuthorSummary>,
+    suggested_responsible: Option<String>,
+    uncommitted_lines: Vec<(String, usize)>, // (file, line) filtered before aggregation
 }
 
 struct AuthorSummary {
     author: String,
     mail: String,
     commit_count: usize,
+    score: f64,
     latest_time: NaiveDateTime,
     latest_commit: String,
     files: Vec<String>,
     lines: Vec<usize>,
 }
+
+trait Reporter {
+    fn render(&self, r: &BlameResult, out: &mut dyn Write) -> Result<()>;
+}
 ```
+
+JSON `commit` field carries a VCS prefix: `"git:abc1234"` or `"svn:r42"`.
 
 ## 4. VCS backend
 
 ```rust
 trait VcsBackend {
     fn name(&self) -> &str;
-    fn blame_file(&self, file: &str, lines: Option<Range<usize>>) -> Result<Vec<BlameEntry>>;
+    fn blame_file(&self, file: &str, lines: &LineSpec) -> Result<Vec<BlameEntry>>;
     fn diff_revisions(&self, base: &str, head: &str) -> Result<Vec<FileDiff>>;
 }
 
@@ -164,7 +186,18 @@ Execute `git blame --porcelain <file>` and parse porcelain format output.
 
 ### SVN backend
 
-Execute `svn blame <file>` with optional `-r` range, then `svn log -r <rev>` for detail.
+1. `svn blame <file>` — produces line → revision mapping.
+2. `svn log -r MIN:MAX --xml <file>` — one call to fetch all commit metadata in the revision range; merge into entries locally.
+
+Do **not** issue per-line `svn log` calls (N-trip cost).
+
+### Command execution rules
+
+All external processes (`git`, `svn`) **must** use `std::process::Command::new(...).arg(...)` — no shell interpolation.
+
+- File paths starting with `-` are prefixed with `--` (e.g., `-- -oddname.rs`).
+- ref / revision values must match `[A-Za-z0-9._/~^@:-]+`; reject with exit code 2 otherwise.
+- Never construct command strings by concatenation.
 
 ## 5. Parsers
 
@@ -178,7 +211,7 @@ Traceback (most recent call last):
     bar()
 ```
 
-Regex: `File "(.+?)", line (\d+)` -> `Vec<(file, line)>`
+Use `Regex::find_iter` on the full input to collect **all** matches of `File "(.+?)", line (\d+)` — this covers chained exceptions separated by `During handling of the above exception…` / `The above exception was the direct cause…` blocks.
 
 ### C/C++ stack trace (parser/traceback_cpp.rs)
 
@@ -186,27 +219,44 @@ Formats supported:
 - GDB: `#0  foo () at example.c:42`
 - MSVC: `example.cpp(42): foo()`
 - addr2line: `foo at /path/example.c:42`
-- backtrace_symbols: `./prog(foo+0x1a) [0x...]`
+- backtrace_symbols: `./prog(foo+0x1a) [0x...]` — **no file:line info; skip frame and emit a warning. addr2line integration is out of scope for v0.1.**
 
 ### Diff parser (parser/diff.rs)
 
 Parse unified diff format. Extract `+` lines (added/modified) with file and line number, then blame those lines.
 
-Strategy for uncommitted changes:
-- `--base`/`--head` mode: blame the `--head` version
-- diff file mode: blame current working tree version
+**Diff mode constraints:**
+
+| Flag group | VCS | Mutually exclusive with |
+|---|---|---|
+| `--base` / `--head` | git only | `--base-rev`, `--head-rev`, `stdin/-f` |
+| `--base-rev` / `--head-rev` | svn only | `--base`, `--head`, `stdin/-f` |
+| `stdin` / `-f` | both | `--base`, `--head`, `--base-rev`, `--head-rev` |
+
+Enforcement: clap `conflicts_with`. Incompatible flag + `--vcs` combination is rejected with exit code 2.
+
+Working-tree blame target when using a diff file:
+- git: blame `HEAD` version
+- svn: blame `BASE` version
 
 ## 6. Aggregation
 
 Smart sorting to find "most likely responsible person":
 
-1. Group BlameEntry by author (after alias resolution)
-2. Score = `commit_count * W_COMMIT + recency_score * W_RECENCY`
-3. `recency_score` = exponential decay based on `latest_time` (more recent = higher)
-4. Default weights: `W_COMMIT = 0.4`, `W_RECENCY = 0.6`
-5. Top scorer = suggested responsible
+**Pre-aggregation filter:** Remove entries where `commit_id == "0".repeat(40)` or `author == "Not Committed Yet"` (git working-tree lines). Collect them into `BlameResult.uncommitted_lines`; they do not affect scoring.
 
-Alias resolution: author names/emails mapped via config `author_aliases` before grouping.
+**Alias resolution:** author names/emails mapped via config `author_aliases` (case-insensitive, matches both name and email) before grouping.
+
+**Scoring:**
+
+```
+recency_score(t) = exp(-Δt / τ),  τ = 90 days,  Δt = now - latest_commit_time
+commit_norm      = commit_count / total_entries_in_result  ∈ [0, 1]
+score            = W_COMMIT * commit_norm + W_RECENCY * recency_score
+W_COMMIT = 0.4,  W_RECENCY = 0.6
+```
+
+Top scorer = `suggested_responsible`.
 
 ## 7. Output formats
 
@@ -299,7 +349,20 @@ colored = "2"
 tempfile = "3"
 ```
 
-## 10. Phases
+## 10. Exit codes & stderr
+
+| Code | Meaning |
+|------|---------|
+| 0 | success |
+| 1 | generic error |
+| 2 | CLI usage error (bad flags, invalid arg format) |
+| 3 | VCS not detected or not installed |
+| 4 | file not found or not under VCS |
+| 5 | empty result (no lines to blame) |
+
+stderr lines are prefixed `[ERROR]` or `[WARN]`. `--quiet` suppresses `[WARN]` but **not** `[ERROR]`.
+
+## 11. Phases
 
 ### Phase 1: Skeleton + blame core
 
