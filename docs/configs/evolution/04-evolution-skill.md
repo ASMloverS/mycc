@@ -138,7 +138,7 @@ ln -s ~/.agents/skills/claudemd-evolution \
 # 4. 同步到 git 跟踪仓库
 cp ~/.claude/custom-harness/registry.yaml \
    C:/Workspace/Repositories/mycc/custom-harness/claude/registry.yaml
-# （提交走 vsc-committer）
+# （提交走 vcs-committer）
 
 # 5. 验证注册成功
 /dispatch --help claudemd-evolution

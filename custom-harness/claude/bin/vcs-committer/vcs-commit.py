@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""vsc-commit.py — VCS add+commit. Usage: [DIR] -m MSG [--push] [--svn] [--dry-run] [--include=P] [--exclude=P]"""
+"""vcs-commit.py — VCS add+commit. Usage: [DIR] -m MSG [--push] [--svn] [--dry-run] [--include=P] [--exclude=P]"""
 import fnmatch, subprocess, sys, io
 from pathlib import Path
 
@@ -30,7 +30,7 @@ def validate_msg(msg: str, vcs: str) -> None:
             die("invalid svn msg; expected single line, 10–100 chars", 5)
 
 def die(msg, code=1):
-    print(f"vsc-commit: {msg}", file=sys.stderr); sys.exit(code)
+    print(f"vcs-commit: {msg}", file=sys.stderr); sys.exit(code)
 
 def run(cmd, cwd, dry=False):
     print(f"+ {' '.join(str(c) for c in cmd)}")

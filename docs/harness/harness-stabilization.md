@@ -9,7 +9,7 @@
 | TASKS 状态更新 | `dev-cycle.md` Step 4 | LLM 自己 Glob/抽 ID/识别 marker/精改单行，易改错行/漏改 |
 | Review 严重度解析 + 循环判定 | `dev-cycle.md` Step 3 / `bug-fixer.md` Step 5 | LLM 肉眼数 CRIT/MAJ 决定是否继续循环，reviewer 输出漂移即崩 |
 | dispatch shape 判断 | `skills/dispatch/SKILL.md` Flow#3 | LLM 看 stdout 第一字符判 array vs object，脆弱 |
-| commit 消息校验 | `vsc-committer.md` Step 2 | "must begin with emoji — regenerate if not"全靠 LLM 自检 |
+| commit 消息校验 | `vcs-committer.md` Step 2 | "must begin with emoji — regenerate if not"全靠 LLM 自检 |
 
 四类节点均为纯机械逻辑，下沉到脚本后 LLM 只需"理解意图 / 生成内容"。
 
@@ -20,7 +20,7 @@
 1. `dev-cycle` Step 4 退化为单行 Bash 调脚本
 2. `code-reviewer` 强制输出 `<REVIEW_RESULT>JSON</REVIEW_RESULT>`，循环控制由脚本解析
 3. `dispatch.py` 始终输出 `{mode, payloads}` envelope，SKILL 不再判 shape
-4. `vsc-commit.py` 内置 gitmoji 正则，不通过即拒收
+4. `vcs-commit.py` 内置 gitmoji 正则，不通过即拒收
 
 ---
 
@@ -34,8 +34,8 @@
 │   └── task-status.py      ← 替代 dev-cycle Step 4 全部 LLM 启发式
 ├── code-reviewer/
 │   └── parse-review.py     ← 解析 <REVIEW_RESULT> 块，判定 pass/fail
-└── vsc-committer/
-    └── vsc-commit.py       ← 含 gitmoji 校验的 VCS 提交脚本
+└── vcs-committer/
+    └── vcs-commit.py       ← 含 gitmoji 校验的 VCS 提交脚本
 ```
 
 ### 修改文件
@@ -43,12 +43,12 @@
 | 文件 | 改动要点 |
 |------|---------|
 | `~/.claude/custom-harness/bin/dispatch.py` | 输出统一 envelope `{mode, payloads}` |
-| `~/.claude/custom-harness/bin/vsc-committer/vsc-commit.py` | 新增 `validate_msg()` + 集成到 commit 路径 |
+| `~/.claude/custom-harness/bin/vcs-committer/vcs-commit.py` | 新增 `validate_msg()` + 集成到 commit 路径 |
 | `~/.claude/custom-harness/agents/dev-cycle.md` | Step 3 接 parse-review.py；Step 4 调 task-status.py |
 | `~/.claude/custom-harness/agents/code-reviewer.md` | 末尾追加 `<REVIEW_RESULT>` 输出契约 |
 | `~/.claude/custom-harness/agents/code-implementer.md` | 末尾追加 `<IMPL_RESULT>` 输出契约 |
 | `~/.claude/custom-harness/agents/bug-fixer.md` | Step 5 改用 parse-review.py |
-| `~/.claude/custom-harness/agents/vsc-committer.md` | 删除 LLM 自检逻辑，改为"exit 5 则重新生成" |
+| `~/.claude/custom-harness/agents/vcs-committer.md` | 删除 LLM 自检逻辑，改为"exit 5 则重新生成" |
 | `~/.claude/skills/dispatch/SKILL.md` | Flow#3 改读 `envelope.mode` |
 
 **兼容性策略：硬切**，旧用法（裸 array/object；LLM 自检 emoji）立即失效，不保留 fallback。
@@ -162,7 +162,7 @@ python ~/.claude/custom-harness/bin/code-reviewer/parse-review.py --file review-
 
 ---
 
-### 4. `~/.claude/custom-harness/bin/vsc-committer/vsc-commit.py` gitmoji 校验
+### 4. `~/.claude/custom-harness/bin/vcs-committer/vcs-commit.py` gitmoji 校验
 
 **新增（脚本顶部）**：
 ```python
@@ -184,7 +184,7 @@ def validate_msg(msg: str, vcs: str) -> None:
 
 **集成点**：`do_git()` / `do_svn()` 入口第一行调 `validate_msg(opts["msg"], vcs)`。
 
-**`~/.claude/custom-harness/agents/vsc-committer.md` 改动**：删除 Step 2 "Message MUST begin with emoji — regenerate if not"；改为"脚本校验消息格式；exit 5 则重新生成后再调"。
+**`~/.claude/custom-harness/agents/vcs-committer.md` 改动**：删除 Step 2 "Message MUST begin with emoji — regenerate if not"；改为"脚本校验消息格式；exit 5 则重新生成后再调"。
 
 ---
 
@@ -211,9 +211,9 @@ echo "no block" | python ~/.claude/custom-harness/bin/code-reviewer/parse-review
 python ~/.claude/custom-harness/bin/dispatch.py code-reviewer "test" | python -c "import sys,json; d=json.load(sys.stdin); assert d['mode']=='single'"
 python ~/.claude/custom-harness/bin/dispatch.py --parallel "code-reviewer a" "code-implementer b" | python -c "import sys,json; d=json.load(sys.stdin); assert d['mode']=='parallel' and len(d['payloads'])==2"
 
-# 4. vsc-commit.py validation
-python ~/.claude/custom-harness/bin/vsc-committer/vsc-commit.py . -m "bad msg" --dry-run   # expect exit 5
-python ~/.claude/custom-harness/bin/vsc-committer/vsc-commit.py . -m "✨ feat(x): add y" --dry-run  # expect ok
+# 4. vcs-commit.py validation
+python ~/.claude/custom-harness/bin/vcs-committer/vcs-commit.py . -m "bad msg" --dry-run   # expect exit 5
+python ~/.claude/custom-harness/bin/vcs-committer/vcs-commit.py . -m "✨ feat(x): add y" --dry-run  # expect ok
 
 # 5. 集成回归
 # /dispatch dev-cycle <some-spec.md>  — 确认 TASKS 自动更新、循环由 exit code 控制
@@ -224,7 +224,7 @@ python ~/.claude/custom-harness/bin/vsc-committer/vsc-commit.py . -m "✨ feat(x
 ## 实现顺序
 
 1. `dispatch.py` envelope + `SKILL.md` flow（改动最小，最先可验证）
-2. `vsc-commit.py --validate-msg` + `vsc-committer.md`
+2. `vcs-commit.py --validate-msg` + `vcs-committer.md`
 3. `bin/code-reviewer/parse-review.py` + `code-reviewer.md` / `code-implementer.md` 契约
 4. `bin/dev-cycle/task-status.py` + `dev-cycle.md` Step 4 改写
 5. `dev-cycle.md` / `bug-fixer.md` Step 3/5 接入 `parse-review.py`

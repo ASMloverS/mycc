@@ -23,7 +23,7 @@
 | 3. Surgical Changes | 11 | 是 | 保留 |
 | 4. Goal-Driven Execution | 10 | 是 | 保留 |
 | Precision Editing Protocol | 16 | **否** — 只在编辑时需要 | **移出为 skill** |
-| Git Commit Convention | 4 | **否** — 已有 vsc-committer agent | **简化为一行指针** |
+| Git Commit Convention | 4 | **否** — 已有 vcs-committer agent | **简化为一行指针** |
 
 ## 具体变更
 
@@ -61,7 +61,7 @@ description: Enforces surgical editing protocol with 100-line rule, locate-windo
 
 ### 2. Git Commit Convention → 保留原位（不下沉）
 
-**不移出 CLAUDE.md。** 理由：vsc-committer 是可选路径，commit convention 是兜底约束；若用户绕过 `/dispatch` 直接 `git commit`，Claude 仍需知道格式规则和红线。两者拆开会失防。
+**不移出 CLAUDE.md。** 理由：vcs-committer 是可选路径，commit convention 是兜底约束；若用户绕过 `/dispatch` 直接 `git commit`，Claude 仍需知道格式规则和红线。两者拆开会失防。
 
 当前 4 行原样保留，仅补一行指针：
 
@@ -70,7 +70,7 @@ description: Enforces surgical editing protocol with 100-line rule, locate-windo
 - gitmoji format: `gitmoji type(scope): desc`
 - gitmoji mapping: feat/new→✨ fix→🐛 docs→📝 style→🎨 refactor→♻️ perf→⚡ test→✅ build→📦 ci→👷 chore→🔧 remove→🔥 wip→🚧
 - Never append `Co-Authored-By: Claude ...`
-- 复杂多文件提交 → `/dispatch vsc-committer`
+- 复杂多文件提交 → `/dispatch vcs-committer`
 ```
 
 ### 3. 瘦身后的 CLAUDE.md 结构（约 70 行）

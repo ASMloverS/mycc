@@ -50,7 +50,7 @@ Week 4: 阶段 5
 ### 阶段 3 验证
 - [ ] CLAUDE.md 行数减少约 20 行（移出 Precision Editing Protocol + 精简 Git Commit Convention）
 - [ ] `~/.claude/skills/precision-editing/SKILL.md` 存在且在编辑任务中触发
-- [ ] Git commit 委托给 vsc-committer 正常工作
+- [ ] Git commit 委托给 vcs-committer 正常工作
 
 ### 阶段 4 验证
 - [ ] `/dispatch --help claudemd-evolution` 显示 desc 字段（确认 registry 注册成功）

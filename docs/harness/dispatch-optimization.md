@@ -121,7 +121,7 @@ CLI 表面 100% 与 `dispatch.py` 一致：相同 argv、相同 JSON envelope、
 
 - 单元测试：YAML 解析、frontmatter、prompt 组装。
 - 集成测试：对 registry 中每个 name，`diff <(python dispatch.py NAME p) <(dispatch.exe NAME p)` 逐字一致；`--inline` / `--parallel` / `--help` 同样比对。
-- 性能：`hyperfine 'python dispatch.py vsc-committer t' './dispatch.exe vsc-committer t'`，期望 ~150ms → <20ms。
+- 性能：`hyperfine 'python dispatch.py vcs-committer t' './dispatch.exe vcs-committer t'`，期望 ~150ms → <20ms。
 - 缓存验证：删除 `.cache/registry.bin`，跑一次后检查生成；touch `registry.yaml` 后再跑检查刷新。
 - Wrapper 降级：移走 `dispatch.exe`，确认 `bin/dispatch` 落到 python，行为不变。
 

@@ -1,11 +1,11 @@
-"""Tests for vsc-commit.py boundary-scoping fixes."""
+"""Tests for vcs-commit.py boundary-scoping fixes."""
 import importlib.util, shutil, tempfile
 from pathlib import Path
 from unittest.mock import patch
 
-# vsc-commit.py has a hyphen — load via spec
-_script = Path(__file__).parent / "vsc-commit.py"
-_spec = importlib.util.spec_from_file_location("vsc_commit", _script)
+# vcs-commit.py has a hyphen — load via spec
+_script = Path(__file__).parent / "vcs-commit.py"
+_spec = importlib.util.spec_from_file_location("vcs_commit", _script)
 mod = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(mod)
 
