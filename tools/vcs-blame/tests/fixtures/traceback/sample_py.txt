@@ -1,0 +1,7 @@
+Traceback (most recent call last):
+  File "example.py", line 42, in <module>
+    foo()
+  File "example.py", line 10, in foo
+    bar()
+  File "utils.py", line 5, in bar
+    raise ValueError("bad value")
