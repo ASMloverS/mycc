@@ -1,5 +1,7 @@
 # vsc-blame design
 
+> **Status**: ✅ Implemented and verified. All phases complete. Tests passing.
+
 CLI tool: blame file/line ownership via git or svn. Parse traceback, diff, or direct file:line input. Smart aggregation to find the responsible person.
 
 ## 1. Arch
