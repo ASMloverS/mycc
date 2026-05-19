@@ -1,0 +1,3 @@
+#0  crash () at crash.c:100
+#1  handle_error (err=0x7fff1234) at handler.cpp:55
+#2  main () at main.cpp:20
