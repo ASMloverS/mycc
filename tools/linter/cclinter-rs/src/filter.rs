@@ -2,6 +2,7 @@ use crate::error::ErrorCategory;
 
 const LEGACY_CATEGORIES: &[&str] = &["build/class", "readability/streams", "readability/function"];
 
+#[derive(Clone)]
 pub struct FilterSet {
     filters: Vec<String>,
     verbose_level: u8,
@@ -70,15 +71,6 @@ impl FilterSet {
     }
 }
 
-impl Clone for FilterSet {
-    fn clone(&self) -> Self {
-        Self {
-            filters: self.filters.clone(),
-            verbose_level: self.verbose_level,
-        }
-    }
-}
-
 pub struct NolintSuppression {
     pub category: Option<ErrorCategory>,
     pub linenum: usize,
@@ -132,31 +124,16 @@ pub fn parse_nolint(raw_line: &str, linenum: usize) -> Vec<NolintSuppression> {
                     category: None,
                     linenum: target_line,
                 });
-            } else if rest.starts_with('(') {
-                let inner = rest.strip_prefix('(').unwrap_or(rest);
-                let inner = inner.strip_suffix(')').unwrap_or(inner);
-                let inner = inner.trim();
-                if inner == "*" || inner.is_empty() || LEGACY_CATEGORIES.contains(&inner) {
-                    results.push(NolintSuppression {
-                        category: None,
-                        linenum: target_line,
-                    });
+            } else if let Some(inner) = rest.strip_prefix('(').map(|s| s.strip_suffix(')').unwrap_or(s).trim()) {
+                let category = if inner == "*" || inner.is_empty() || LEGACY_CATEGORIES.contains(&inner) {
+                    None
                 } else {
-                    match inner.parse::<ErrorCategory>() {
-                        Ok(cat) => {
-                            results.push(NolintSuppression {
-                                category: Some(cat),
-                                linenum: target_line,
-                            });
-                        }
-                        Err(_) => {
-                            results.push(NolintSuppression {
-                                category: None,
-                                linenum: target_line,
-                            });
-                        }
-                    }
-                }
+                    inner.parse::<ErrorCategory>().ok()
+                };
+                results.push(NolintSuppression {
+                    category,
+                    linenum: target_line,
+                });
             }
             break;
         }

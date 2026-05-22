@@ -33,14 +33,9 @@ pub struct ExtensionConfig {
 impl Default for ExtensionConfig {
     fn default() -> Self {
         Self {
-            headers: Some(vec![
-                "h".into(),
-                "hh".into(),
-                "hpp".into(),
-                "hxx".into(),
-                "h++".into(),
-                "cuh".into(),
-            ]),
+            headers: Some(
+                DEFAULT_HEADER_EXTENSIONS.iter().map(|s| s.to_string()).collect(),
+            ),
             sources: Some(vec![
                 "c".into(),
                 "cc".into(),
@@ -64,7 +59,7 @@ pub struct ExcludeConfig {
 pub struct FixConfig {
     pub trailing_whitespace: Option<bool>,
     pub utf8_bom: Option<bool>,
-    pub crl: Option<bool>,
+    pub crlf: Option<bool>,
     pub block_comments: Option<bool>,
 }
 
@@ -73,11 +68,14 @@ impl Default for FixConfig {
         Self {
             trailing_whitespace: Some(true),
             utf8_bom: Some(true),
-            crl: Some(true),
+            crlf: Some(true),
             block_comments: Some(true),
         }
     }
 }
+
+/// Default header file extensions used by both config and lint_context.
+pub const DEFAULT_HEADER_EXTENSIONS: &[&str] = &["h", "hh", "hpp", "hxx", "h++", "cuh"];
 
 impl Config {
     pub fn load(dir: &Path) -> Result<Option<Self>, crate::error::LintError> {
@@ -145,7 +143,7 @@ files = ["build/**", "third_party/**"]
 [fix]
 trailing_whitespace = true
 utf8_bom = false
-crl = true
+crlf = true
 block_comments = false
 "#;
         let config: Config = toml::from_str(toml_str).unwrap();
@@ -172,7 +170,7 @@ block_comments = false
         let fix = config.fix.unwrap();
         assert_eq!(fix.trailing_whitespace, Some(true));
         assert_eq!(fix.utf8_bom, Some(false));
-        assert_eq!(fix.crl, Some(true));
+        assert_eq!(fix.crlf, Some(true));
         assert_eq!(fix.block_comments, Some(false));
     }
 
@@ -197,7 +195,7 @@ block_comments = false
         let fix = FixConfig::default();
         assert_eq!(fix.trailing_whitespace, Some(true));
         assert_eq!(fix.utf8_bom, Some(true));
-        assert_eq!(fix.crl, Some(true));
+        assert_eq!(fix.crlf, Some(true));
         assert_eq!(fix.block_comments, Some(true));
     }
 

@@ -30,6 +30,8 @@ pub fn format_junit(violations: &[Violation]) -> String {
         groups.entry(&v.filename).or_default().push(v);
     }
 
+    let count = violations.len();
+
     let mut testcases = String::new();
     for (filename, viols) in &groups {
         let mut failures = String::new();
@@ -46,7 +48,8 @@ pub fn format_junit(violations: &[Violation]) -> String {
     }
 
     format!(
-        "<testsuite tests=\"{}\">\n{}</testsuite>",
+        "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>\n<testsuite errors=\"0\" failures=\"{}\" name=\"cpplint\" tests=\"{}\">\n{}</testsuite>",
+        count,
         groups.len(),
         testcases
     )
@@ -71,6 +74,7 @@ pub fn format_sed(v: &Violation, bsd_mode: bool) -> String {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub enum OutputFormat {
     Emacs,
     Vs7,
@@ -142,6 +146,10 @@ mod tests {
     fn test_junit_format() {
         let v = make_violation();
         let xml = format_junit(&[v]);
+        assert!(xml.contains("<?xml version=\"1.0\" encoding=\"UTF-8\" ?>"));
+        assert!(xml.contains("errors=\"0\""));
+        assert!(xml.contains("failures=\"1\""));
+        assert!(xml.contains("name=\"cpplint\""));
         assert!(xml.contains("<testsuite"));
         assert!(xml.contains("<testcase"));
         assert!(xml.contains("<failure>"));

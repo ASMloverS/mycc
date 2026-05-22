@@ -8,6 +8,12 @@ pub const LIKELY_MY_HEADER: u8 = 4;
 pub const POSSIBLE_MY_HEADER: u8 = 5;
 pub const OTHER_HEADER: u8 = 6;
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum IncludeKind {
+    Quoted, // "file.h"
+    System, // <file.h>
+}
+
 pub static CPP_HEADERS: LazyLock<HashSet<&'static str>> = LazyLock::new(|| {
     HashSet::from([
         "algorithm",
@@ -447,55 +453,74 @@ pub static C_STANDARD_HEADER_FOLDERS: LazyLock<HashSet<&'static str>> = LazyLock
 
 pub static HEADERS_CONTAINING_TEMPLATES: LazyLock<HashMap<&'static str, Vec<&'static str>>> =
     LazyLock::new(|| {
-        let mut m = HashMap::new();
-        m.insert("std::vector", vec!["<vector>"]);
-        m.insert("std::map", vec!["<map>"]);
-        m.insert("std::string", vec!["<string>"]);
-        m.insert("std::set", vec!["<set>"]);
-        m.insert("std::unordered_map", vec!["<unordered_map>"]);
-        m.insert("std::unique_ptr", vec!["<memory>"]);
-        m.insert("std::shared_ptr", vec!["<memory>"]);
-        m.insert("std::function", vec!["<functional>"]);
-        m.insert("std::pair", vec!["<utility>"]);
-        m.insert("std::sort", vec!["<algorithm>"]);
-        m.insert("std::cout", vec!["<iostream>"]);
-        m.insert("std::ostringstream", vec!["<sstream>"]);
-        m.insert("std::thread", vec!["<thread>"]);
-        m.insert("std::mutex", vec!["<mutex>"]);
-        m.insert("std::atomic", vec!["<atomic>"]);
-        m.insert("std::future", vec!["<future>"]);
-        m.insert("std::optional", vec!["<optional>"]);
-        m.insert("std::variant", vec!["<variant>"]);
-        m.insert("std::deque", vec!["<deque>"]);
-        m.insert("std::queue", vec!["<queue>"]);
-        m.insert("std::stack", vec!["<stack>"]);
-        m.insert("std::array", vec!["<array>"]);
-        m.insert("std::list", vec!["<list>"]);
-        m.insert("std::forward_list", vec!["<forward_list>"]);
-        m.insert("std::tuple", vec!["<tuple>"]);
-        m.insert("std::regex", vec!["<regex>"]);
-        m.insert("std::complex", vec!["<complex>"]);
-        m.insert("std::valarray", vec!["<valarray>"]);
-        m.insert("std::bitset", vec!["<bitset>"]);
-        m.insert("std::chrono", vec!["<chrono>"]);
-        m.insert("std::filesystem", vec!["<filesystem>"]);
-        m.insert("std::span", vec!["<span>"]);
-        m.insert("std::any", vec!["<any>"]);
-        m.insert("std::numeric_limits", vec!["<limits>"]);
-        m.insert("std::runtime_error", vec!["<stdexcept>"]);
-        m.insert("std::logic_error", vec!["<stdexcept>"]);
-        m.insert("std::streambuf", vec!["<streambuf>"]);
-        m.insert("std::ios_base", vec!["<ios>"]);
-        m.insert("std::basic_string", vec!["<string>"]);
-        m.insert("std::hash", vec!["<functional>"]);
-        m.insert("std::greater", vec!["<functional>"]);
-        m.insert("std::less", vec!["<functional>"]);
-        m.insert("std::equal_to", vec!["<functional>"]);
-        m.insert("std::allocator", vec!["<memory>"]);
-        m
+        HashMap::from([
+            ("std::vector", vec!["<vector>"]),
+            ("std::map", vec!["<map>"]),
+            ("std::string", vec!["<string>"]),
+            ("std::set", vec!["<set>"]),
+            ("std::unordered_map", vec!["<unordered_map>"]),
+            ("std::unique_ptr", vec!["<memory>"]),
+            ("std::shared_ptr", vec!["<memory>"]),
+            ("std::function", vec!["<functional>"]),
+            ("std::pair", vec!["<utility>"]),
+            ("std::sort", vec!["<algorithm>"]),
+            ("std::cout", vec!["<iostream>"]),
+            ("std::ostringstream", vec!["<sstream>"]),
+            ("std::thread", vec!["<thread>"]),
+            ("std::mutex", vec!["<mutex>"]),
+            ("std::atomic", vec!["<atomic>"]),
+            ("std::future", vec!["<future>"]),
+            ("std::optional", vec!["<optional>"]),
+            ("std::variant", vec!["<variant>"]),
+            ("std::deque", vec!["<deque>"]),
+            ("std::queue", vec!["<queue>"]),
+            ("std::stack", vec!["<stack>"]),
+            ("std::array", vec!["<array>"]),
+            ("std::list", vec!["<list>"]),
+            ("std::forward_list", vec!["<forward_list>"]),
+            ("std::tuple", vec!["<tuple>"]),
+            ("std::regex", vec!["<regex>"]),
+            ("std::complex", vec!["<complex>"]),
+            ("std::valarray", vec!["<valarray>"]),
+            ("std::bitset", vec!["<bitset>"]),
+            ("std::chrono", vec!["<chrono>"]),
+            ("std::filesystem", vec!["<filesystem>"]),
+            ("std::span", vec!["<span>"]),
+            ("std::any", vec!["<any>"]),
+            ("std::numeric_limits", vec!["<limits>"]),
+            ("std::runtime_error", vec!["<stdexcept>"]),
+            ("std::logic_error", vec!["<stdexcept>"]),
+            ("std::streambuf", vec!["<streambuf>"]),
+            ("std::ios_base", vec!["<ios>"]),
+            ("std::basic_string", vec!["<string>"]),
+            ("std::hash", vec!["<functional>"]),
+            ("std::greater", vec!["<functional>"]),
+            ("std::less", vec!["<functional>"]),
+            ("std::equal_to", vec!["<functional>"]),
+            ("std::allocator", vec!["<memory>"]),
+            ("std::begin", vec!["<iterator>"]),
+            ("std::end", vec!["<iterator>"]),
+            ("std::move", vec!["<utility>"]),
+            ("std::forward", vec!["<utility>"]),
+            ("std::make_pair", vec!["<utility>"]),
+            ("std::make_shared", vec!["<memory>"]),
+            ("std::make_unique", vec!["<memory>"]),
+            ("std::min", vec!["<algorithm>"]),
+            ("std::max", vec!["<algorithm>"]),
+            ("std::find", vec!["<algorithm>"]),
+            ("std::count", vec!["<algorithm>"]),
+            ("std::swap", vec!["<utility>"]),
+            ("std::tie", vec!["<tuple>"]),
+            ("std::get", vec!["<tuple>"]),
+        ])
     });
 
-pub fn classify_include(include_path: &str, filename: &str, _include_order: &str) -> u8 {
+pub fn classify_include(
+    include_path: &str,
+    filename: &str,
+    _include_order: &str,
+    include_kind: IncludeKind,
+) -> u8 {
     let path = std::path::Path::new(include_path);
     let inc_stem = path.file_stem().and_then(|s| s.to_str()).unwrap_or("");
     let inc_ext = path.extension().and_then(|s| s.to_str()).unwrap_or("");
@@ -521,6 +546,10 @@ pub fn classify_include(include_path: &str, filename: &str, _include_order: &str
         let first_seg = include_path.split('/').next().unwrap_or("");
         if C_STANDARD_HEADER_FOLDERS.contains(first_seg) {
             return C_SYS_HEADER;
+        }
+        // System includes with extensions that aren't known C headers
+        if include_kind == IncludeKind::System {
+            return OTHER_SYS_HEADER;
         }
     }
 
@@ -559,7 +588,7 @@ mod tests {
     #[test]
     fn test_classify_likely_my_header() {
         assert_eq!(
-            classify_include("browser.h", "browser.cc", "default"),
+            classify_include("browser.h", "browser.cc", "default", IncludeKind::Quoted),
             LIKELY_MY_HEADER
         );
     }
@@ -567,7 +596,7 @@ mod tests {
     #[test]
     fn test_classify_c_sys_header() {
         assert_eq!(
-            classify_include("stdio.h", "test.cc", "default"),
+            classify_include("stdio.h", "test.cc", "default", IncludeKind::Quoted),
             C_SYS_HEADER
         );
     }
@@ -575,7 +604,7 @@ mod tests {
     #[test]
     fn test_classify_cpp_sys_header() {
         assert_eq!(
-            classify_include("vector", "test.cc", "default"),
+            classify_include("vector", "test.cc", "default", IncludeKind::Quoted),
             CPP_SYS_HEADER
         );
     }
@@ -583,7 +612,7 @@ mod tests {
     #[test]
     fn test_classify_other_header() {
         assert_eq!(
-            classify_include("mylib.h", "test.cc", "default"),
+            classify_include("mylib.h", "test.cc", "default", IncludeKind::Quoted),
             OTHER_HEADER
         );
     }
@@ -591,7 +620,7 @@ mod tests {
     #[test]
     fn test_classify_possible_my_header() {
         assert_eq!(
-            classify_include("chrome/tab.h", "chrome/browser.cc", "default"),
+            classify_include("chrome/tab.h", "chrome/browser.cc", "default", IncludeKind::Quoted),
             POSSIBLE_MY_HEADER
         );
     }
@@ -600,5 +629,23 @@ mod tests {
     fn test_headers_containing_templates() {
         let v = HEADERS_CONTAINING_TEMPLATES.get("std::vector").unwrap();
         assert!(v.contains(&"<vector>"));
+    }
+
+    #[test]
+    fn test_classify_other_sys_header() {
+        // System include (<>) with extension that's not a known C header
+        assert_eq!(
+            classify_include("boost/optional.hpp", "test.cc", "default", IncludeKind::System),
+            OTHER_SYS_HEADER
+        );
+    }
+
+    #[test]
+    fn test_classify_system_include_known_c_header() {
+        // Known C header with angle brackets still returns C_SYS_HEADER
+        assert_eq!(
+            classify_include("stdio.h", "test.cc", "default", IncludeKind::System),
+            C_SYS_HEADER
+        );
     }
 }

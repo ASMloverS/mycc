@@ -61,9 +61,9 @@ pub struct PreprocessorSnapshot {
 
 #[derive(Debug, Clone)]
 pub struct NestingState {
-    pub stack: Vec<BlockKind>,
-    pub pp_stack: Vec<PreprocessorSnapshot>,
-    pub previous_stack_top: Option<BlockKind>,
+    stack: Vec<BlockKind>,
+    pp_stack: Vec<PreprocessorSnapshot>,
+    previous_stack_top: Option<BlockKind>,
 }
 
 // ── Static regexes ─────────────────────────────────────────────────────
@@ -75,7 +75,7 @@ static NAMESPACE_RE: LazyLock<Regex> =
     LazyLock::new(|| Regex::new(r"namespace\s+(\w+)").unwrap());
 
 static ASM_RE: LazyLock<Regex> =
-    LazyLock::new(|| Regex::new(r"(?:asm|__asm__)\s*(?:volatile\s*)?[{(]").unwrap());
+    LazyLock::new(|| Regex::new(r"^\s*(?:asm|_asm|__asm|__asm__)(?:\s+(?:volatile|__volatile__))?\s*[{(]").unwrap());
 
 // ── BlockKind accessors ────────────────────────────────────────────────
 
@@ -204,7 +204,7 @@ impl NestingState {
                 }
             }
             // Process the rest of the line for brace tracking even in preprocessor lines
-            self.update_braces(trimmed);
+            self.update_braces_from(trimmed);
             return;
         }
 
@@ -266,7 +266,7 @@ impl NestingState {
             }
 
             self.stack.push(BlockKind::Class(info));
-            self.update_braces(trimmed);
+            self.update_braces_from(trimmed);
             return;
         }
 
@@ -287,7 +287,7 @@ impl NestingState {
             }
 
             self.stack.push(BlockKind::Namespace(info));
-            self.update_braces(trimmed);
+            self.update_braces_from(trimmed);
             return;
         }
 
@@ -298,11 +298,7 @@ impl NestingState {
             }
         }
 
-        self.update_braces(trimmed);
-    }
-
-    fn update_braces(&mut self, line: &str) {
-        self.update_braces_from(line);
+        self.update_braces_from(trimmed);
     }
 
     fn update_braces_from(&mut self, line: &str) {
@@ -368,12 +364,7 @@ impl NestingState {
         };
 
         // Track parentheses
-        let new_paren = top.open_parentheses() as i32 + paren_depth as i32;
-        top.set_open_parentheses(if new_paren < 0 {
-            0
-        } else {
-            new_paren as usize
-        });
+        top.set_open_parentheses(top.open_parentheses() + paren_depth);
 
         // If we haven't seen the opening brace yet, just check for it
         if !top.seen_open_brace() && brace_delta > 0 {
@@ -382,10 +373,15 @@ impl NestingState {
             // apply remaining brace_delta
         }
 
-        // Apply brace_delta: if we go to 0 or below after having seen open brace, pop
-        if brace_delta < 0 && top.seen_open_brace() {
-            // The closing brace balances the block — pop it
+        // Apply brace_delta: pop stack entries for each closing brace that
+        // matches a previously-seen open brace on that entry.
+        while brace_delta < 0 && !self.stack.is_empty() {
+            let top = self.stack.last().unwrap();
+            if !top.seen_open_brace() {
+                break;
+            }
             self.stack.pop();
+            brace_delta += 1;
         }
     }
 
@@ -449,7 +445,7 @@ impl NestingState {
             violations.push(Violation {
                 filename: filename.to_string(),
                 linenum: bk.starting_linenum(),
-                category: ErrorCategory::ReadabilityBraces,
+                category: ErrorCategory::BuildNamespaces,
                 confidence: 80,
                 message: msg,
             });
@@ -460,10 +456,11 @@ impl NestingState {
 
 /// Find the position after `extern "C"` or `extern 'C'` in the line.
 /// Returns the end position of the match, or None.
+static EXTERN_C_RE: LazyLock<Regex> =
+    LazyLock::new(|| Regex::new(r#"extern\s+"C""#).unwrap());
+
 fn find_extern_c(line: &str) -> Option<usize> {
-    let re: LazyLock<Regex> =
-        LazyLock::new(|| Regex::new(r#"extern\s+"C""#).unwrap());
-    re.find(line).map(|m| m.end())
+    EXTERN_C_RE.find(line).map(|m| m.end())
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────
@@ -587,5 +584,14 @@ mod tests {
         state.update("class Foo {", 2);
         state.update("  asm {", 3);
         assert!(state.in_asm_block());
+    }
+
+    #[test]
+    fn test_multiple_close_braces_one_line() {
+        let mut state = NestingState::new();
+        state.update("namespace foo {", 1);
+        state.update("class Bar {", 2);
+        state.update("}; };", 3);
+        assert_eq!(state.stack.len(), 0);
     }
 }

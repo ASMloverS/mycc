@@ -2,7 +2,7 @@ use std::collections::HashSet;
 use std::path::Path;
 
 use crate::cleanse::CleansedLines;
-use crate::config::Config;
+use crate::config::{Config, DEFAULT_HEADER_EXTENSIONS};
 use crate::error::{ErrorCategory, Violation};
 use crate::file_info::FileInfo;
 use crate::filter::{FilterSet, NolintSuppression};
@@ -11,7 +11,7 @@ use crate::include_state::IncludeState;
 use crate::nesting::NestingState;
 
 fn default_header_extensions() -> HashSet<String> {
-    ["h", "hh", "hpp", "hxx", "h++", "cuh"]
+    DEFAULT_HEADER_EXTENSIONS
         .iter()
         .map(|s| s.to_string())
         .collect()

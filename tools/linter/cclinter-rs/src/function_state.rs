@@ -56,12 +56,7 @@ impl FunctionState {
             None
         };
 
-        self.in_function = false;
-        self.function_name = String::new();
-        self.function_start = 0;
-        self.function_lines = 0;
-        self.is_test_function = false;
-
+        *self = Self::new();
         result
     }
 

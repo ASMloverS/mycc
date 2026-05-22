@@ -19,7 +19,7 @@ impl IncludeState {
             section: 0,
             last_include: None,
             last_sorted_section: 0,
-            include_list: vec![],
+            include_list: Vec::new(),
         }
     }
 
@@ -87,9 +87,7 @@ impl IncludeState {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    const LIKELY_MY_HEADER: u8 = 1;
-    const C_SYS_HEADER: u8 = 2;
+    use crate::headers::{LIKELY_MY_HEADER, C_SYS_HEADER};
 
     #[test]
     fn test_new_state() {
@@ -101,18 +99,18 @@ mod tests {
     #[test]
     fn test_ordered_sections() {
         let mut state = IncludeState::new();
-        let v1 = state.check_include_order("foo.h", 1, LIKELY_MY_HEADER, "test.cc");
+        let v1 = state.check_include_order("stdio.h", 1, C_SYS_HEADER, "test.cc");
         assert!(v1.is_empty());
-        let v2 = state.check_include_order("stdio.h", 2, C_SYS_HEADER, "test.cc");
+        let v2 = state.check_include_order("foo.h", 2, LIKELY_MY_HEADER, "test.cc");
         assert!(v2.is_empty());
     }
 
     #[test]
     fn test_disorder_triggers_violation() {
         let mut state = IncludeState::new();
-        let v1 = state.check_include_order("stdio.h", 1, C_SYS_HEADER, "test.cc");
+        let v1 = state.check_include_order("foo.h", 1, LIKELY_MY_HEADER, "test.cc");
         assert!(v1.is_empty());
-        let v2 = state.check_include_order("foo.h", 2, LIKELY_MY_HEADER, "test.cc");
+        let v2 = state.check_include_order("stdio.h", 2, C_SYS_HEADER, "test.cc");
         assert!(!v2.is_empty());
         assert_eq!(v2[0].category, ErrorCategory::BuildIncludeOrder);
     }
