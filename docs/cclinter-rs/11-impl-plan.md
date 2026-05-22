@@ -13,15 +13,18 @@
 
 ---
 
-## Phase 1: Foundation
+## Phase 1: Foundation ✅
 
-### T1: 项目初始化
+> **状态**: 已完成 (2026-05-22)。75 个测试通过，0 clippy 警告。
+> **代码**: `tools/linter/cclinter-rs/` (~2500 LOC)
+
+### T1: 项目初始化 ✅
 
 - 创建 `Cargo.toml`（依赖：clap, regex, rayon, serde, toml, quick-xml, walkdir, globset, criterion, thiserror）
 - `src/main.rs`, `src/lib.rs`
 - 验证 `cargo build` 通过
 
-### T2: 错误类型 + ErrorCategory 系统
+### T2: 错误类型 + ErrorCategory 系统 ✅
 
 - 定义 `LintError` enum（`thiserror` 派生）
 - 实现 70 个变体的 enum（66 原始 cpplint 2.0.2 + 4 扩展）
@@ -30,14 +33,14 @@
 - `Violation` struct
 - 测试: roundtrip, all_70, unknown_parse_fail, group
 
-### T3: Filter 系统
+### T3: Filter 系统 ✅
 
 - `FilterSet` struct
 - 默认过滤器 `["-build/include_alpha"]`
 - `add()`, `should_print()`, `backup()`, `restore()`
 - 测试: default, positive, negative, prefix, order, confidence
 
-### T4: 配置系统 (TOML)
+### T4: 配置系统 (TOML) ✅
 
 - `Config` struct (serde Deserialize)
 - `FilterConfig`, `ExtensionConfig`, `ExcludeConfig`, `FixConfig`
@@ -45,13 +48,13 @@
 - `effective_*()` 方法含 fallback 默认值
 - 测试: parse, defaults, search
 
-### T5: CleansedLines 预处理
+### T5: CleansedLines 预处理 ✅
 
 - 4 层行数组: raw, without_raw_strings, without_comments, elided
 - `RemoveMultiLineComments`, `CleanseRawStrings`, `CleanseComments`, `CollapseStrings`
 - 测试: parallel_arrays, comments_stripped, strings_collapsed, raw_strings, multiline
 
-### T6: NestingState
+### T6: NestingState ✅
 
 - `BlockKind` enum (`Class(ClassInfo)`, `Namespace(NamespaceInfo)`, `ExternC(ExternCInfo)`)
 - `ClassInfo`, `NamespaceInfo`, `ExternCInfo` 各自独立 struct（公共字段独立持有）
@@ -60,25 +63,25 @@
 - `previous_stack_top: Option<BlockKind>`（clone）
 - 测试: nesting_level, class_detect, namespace, extern_c, preprocessor, asm
 
-### T7: FileInfo
+### T7: FileInfo ✅
 
 - 路径工具: `RepositoryName`, `Split`, header guard 推导
 - 独立测试
 
-### T8: Headers 数据集
+### T8: Headers 数据集 ✅
 
 - `CPP_HEADERS`, `C_HEADERS`, `C_STANDARD_HEADER_FOLDERS`
 - `classify_include()` 函数
 - `LazyLock<HashSet>` 存储（Rust 1.80+）
 - `HEADERS_CONTAINING_TEMPLATES` 映射（从 cpplint 移植 ~60 条）
 
-### T9: IncludeState + FunctionState
+### T9: IncludeState + FunctionState ✅
 
 - `IncludeState`: include 排序追踪, 字母序检查
 - `FunctionState`: 函数体行数追踪
 - 各自独立测试
 
-### T10: LintContext + Output
+### T10: LintContext + Output ✅
 
 - `LintContext<'a>` 组合所有 per-file 状态
 - `report()` 方法（含 NOLINT 抑制检查 + filter 检查）
