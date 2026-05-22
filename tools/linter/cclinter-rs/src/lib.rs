@@ -1,3 +1,4 @@
+pub mod checks;
 pub mod cleanse;
 pub mod config;
 pub mod error;

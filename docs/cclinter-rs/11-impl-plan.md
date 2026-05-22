@@ -91,69 +91,52 @@
 
 ---
 
-## Phase 2: Check Functions
+## Phase 2: Check Functions ✅
 
-### T11: whitespace/* (19 类别)
+> **状态**: 已完成 (2026-05-23)。184 个测试通过，0 clippy 警告。
+> **代码**: `tools/linter/cclinter-rs/src/checks/` (~2500 LOC)
 
-按子功能逐步实现:
-1. tab
-2. indent
-3. indent_namespace
-4. end_of_line
-5. line_length (含 Unicode 宽度)
-6. braces (CheckBraces)
-7. blank_line
-8. comma + semicolon
-9. comments (// 格式, TODO)
-10. operators (=, ==, <<, etc.)
-11. parens (if/for/while/switch)
-12. empty_body (loop/conditional/if)
-13. newline (多条语句)
-14. ending_newline
-15. forcolon
-16. todo (TODO 注释中的空白问题)
+### T11: whitespace/* (19 类别) ✅
 
-### T12: build/* (17 类别)
+- `src/checks/whitespace.rs`: 17 个检查函数
+- check_tab, check_indent, check_indent_namespace, check_end_of_line, check_line_length
+- check_braces, check_blank_line, check_comma, check_semicolon, check_comments
+- check_operators, check_parens, check_empty_body, check_newline, check_ending_newline
+- check_forcolon, check_todo
+- Unicode 宽度计算（CJK 字符算 2 宽度）
+- URL 注释行豁免行长度检查
+- 测试: 25 个
 
-1. header_guard
-2. include_order + include_alpha
-3. include + include_subdir
-4. include_what_you_use
-5. namespaces (3 个: namespaces, namespaces_headers, namespaces_literals)
-6. c++11, c++17
-7. deprecated, endif_comment, explicit_make_pair, printf_format, storage_class
-8. forward_decl
+### T12: build/* (17 类别) ✅
 
-### T13: readability/* (14 类别)
+- `src/checks/build.rs`: 15 个检查函数
+- check_header_guard, check_include_order, check_include, check_include_what_you_use
+- check_namespaces, check_namespaces_headers, check_namespaces_literals
+- check_cpp11, check_cpp17, check_deprecated, check_endif_comment
+- check_explicit_make_pair, check_printf_format, check_storage_class, check_forward_decl
+- 测试: 18 个
 
-1. casting
-2. constructors
-3. fn_size
-4. braces
-5. strings
-6. todo
-7. namespace
-8. alt_tokens
-9. check
-10. inheritance, multiline_comment/string, nolint, nul, utf8
+### T13: readability/* (14 类别) ✅
 
-### T14: runtime/* (15 类别)
+- `src/checks/readability.rs`: 14 个检查函数
+- check_casting, check_constructors, check_fn_size, check_braces_readability
+- check_strings, check_todo_readability, check_namespace_readability, check_alt_tokens
+- check_check, check_inheritance, check_multiline_comment, check_nolint, check_nul, check_utf8
+- 测试: 19 个
 
-1. references
-2. string
-3. printf + printf_format
-4. int
-5. explicit
-6. casting
-7. memset
-8. init
-9. operator
-10. arrays, invalid_increment, member_string_references, threadsafe_fn, vlog
+### T14: runtime/* (15 类别) ✅
 
-### T15: legal/copyright (1 类别)
+- `src/checks/runtime.rs`: 15 个检查函数
+- check_references, check_string, check_printf, check_printf_format, check_int
+- check_explicit, check_casting, check_memset, check_init, check_operator
+- check_arrays, check_invalid_increment, check_member_string_references, check_threadsafe_fn, check_vlog
+- 测试: 22 个
 
-- `check_copyright()`: 前 10 行检查 "Copyright"
-- 测试: present, missing, case_insensitive
+### T15: legal/copyright (1 类别) ✅
+
+- `src/checks/legal.rs`: check_copyright()
+- 前 10 行检查 "Copyright"（大小写不敏感），含年份验证
+- 测试: 11 个
 
 ---
 

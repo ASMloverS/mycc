@@ -9,10 +9,12 @@ pub struct CleansedLines {
     lines_without_raw_strings: Vec<String>,
     lines: Vec<String>,
     elided: Vec<String>,
+    ends_with_newline: bool,
 }
 
 impl CleansedLines {
     pub fn from_source(source: &str) -> Self {
+        let ends_with_newline = source.ends_with('\n');
         let mut raw_lines = Vec::new();
         raw_lines.push(
             "// marker so line numbers and indices both start at 1".to_string(),
@@ -39,6 +41,7 @@ impl CleansedLines {
             lines_without_raw_strings,
             lines,
             elided,
+            ends_with_newline,
         }
     }
 
@@ -64,6 +67,10 @@ impl CleansedLines {
 
     pub fn is_empty(&self) -> bool {
         self.raw_lines.is_empty()
+    }
+
+    pub fn ends_with_newline(&self) -> bool {
+        self.ends_with_newline
     }
 }
 
