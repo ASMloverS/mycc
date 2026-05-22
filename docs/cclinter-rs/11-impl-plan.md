@@ -140,19 +140,22 @@
 
 ---
 
-## Phase 3: Extensions
+## Phase 3: Extensions ✅
 
-### T16: 扩展检查 + Auto-fix
+> **状态**: 已完成 (2026-05-23)。232 个测试通过，0 clippy 警告。
+> **代码**: `tools/linter/cclinter-rs/src/checks/extensions.rs` + `src/fix.rs` (~450 LOC)
 
-1. block_comment 检测（使用 raw_lines）
-2. utf8_bom 检测（字节级）
-3. utf8_invalid 检测（字节级）
-4. crlf 检测（字节级，`&[u8]` 签名）
-5. fix_trailing_whitespace
-6. fix_utf8_bom（字节级）
-7. fix_crlf（字节级）
-8. fix_block_to_line_comments（使用 CleansedLines 比较定位真实注释，处理字符串内误转）
-9. FixEngine 组合
+### T16: 扩展检查 + Auto-fix ✅
+
+1. block_comment 检测（使用 raw_lines） ✅
+2. utf8_bom 检测（字节级） ✅
+3. utf8_invalid 检测（字节级） ✅
+4. crlf 检测（字节级，`&[u8]` 签名） ✅
+5. fix_trailing_whitespace ✅
+6. fix_utf8_bom（字节级） ✅
+7. fix_crlf（字节级） ✅
+8. fix_block_to_line_comments（使用 CleansedLines 比较定位真实注释，处理字符串内误转） ✅
+9. FixEngine 组合 ✅
 
 ---
 

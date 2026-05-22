@@ -4,6 +4,7 @@ pub mod config;
 pub mod error;
 pub mod file_info;
 pub mod filter;
+pub mod fix;
 pub mod function_state;
 pub mod include_state;
 pub mod headers;
