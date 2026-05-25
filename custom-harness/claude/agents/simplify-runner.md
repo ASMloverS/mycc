@@ -19,7 +19,7 @@ Read every target file in full. Required before Skill call so simplify sees curr
 
 ### Step 2 — Simplify
 
-**MANDATORY:** `Skill("simplify")` — must be called. Skipping is a contract violation.
+**MANDATORY:** `Skill("code-simplify")` — must be called. Skipping is a contract violation.
 
 Apply all suggestions from simplify: remove dead code, eliminate redundant logic, collapse trivial abstractions, clean unused imports/vars. No behavior changes. No new features.
 
