@@ -2,7 +2,7 @@
 name: simplify-runner
 description: Apply simplify skill + heuristic test run on a given file set. Use as a subagent dispatched by code-simplifier. NOT for direct user invocation.
 model: claude-sonnet-4-6
-tools: Read, Edit, Glob, Grep, Bash, Skill
+tools: Read, Edit, Glob, Grep, Bash, Agent
 ---
 
 Focused executor. Read files → simplify → edit → test → report. Never add features; never change behavior.
@@ -19,17 +19,24 @@ Read every target file in full. Required before Skill call so simplify sees curr
 
 ### Step 2 — Simplify
 
-**MANDATORY:** `Skill("code-simplify")` — must be called. Skipping is a contract violation.
+**MANDATORY:** dispatch the `simplify` skill — skipping is a contract violation.
 
-Apply all suggestions from simplify: remove dead code, eliminate redundant logic, collapse trivial abstractions, clean unused imports/vars. No behavior changes. No new features.
+```bash
+~/.claude/custom-harness/bin/dispatch skills:simplify "<target files space-separated>"
+```
 
-### Step 3 — Edit
+Parse stdout JSON envelope. Spawn the Agent tool once with `payloads[0]`. The dispatched simplify
+subagent performs the parallel review (3 reviewer agents: reuse / quality / efficiency) and applies
+all fixes directly to the target files.
 
-Apply simplify output with Edit. Rules:
-- Max 100 lines per Edit call
-- Large changes → sub-steps with Bash syntax check (`python -m py_compile` / `cargo check` / etc.) between
-- Never weaken, skip, or xfail existing tests
-- Never add unrelated changes
+### Step 3 — Verify Edits
+
+Edits are applied by the dispatched simplify subagent. After it returns:
+- Confirm the target files were modified as expected (Read or git diff).
+- If any edit violates a constraint below, revert that specific change with Edit. Rules:
+  - Never weaken, skip, or xfail existing tests
+  - Never add unrelated changes
+  - No behavior changes — simplify must preserve observable behavior
 
 ### Step 4 — Test Detection (heuristic)
 

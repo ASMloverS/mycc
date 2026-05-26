@@ -9,7 +9,7 @@ description: User-invoked router. Spawn registered agent/command/skill as one-sh
 
 User: `/dispatch <name|type:name> [<prompt>]` [`--model M`] [`--bg`] [`--inline`] [`--help [name]`]
 
-If `<prompt>` is omitted, the agent receives an empty `User Input` block — agents that document defaults (like `vcs-committer`) will run with those defaults.
+If `<prompt>` is omitted, the agent receives an empty `User Input` block — agents that document defaults (like `vsc-committer`) will run with those defaults.
 
 `--inline`: embed the full MD body directly in the subagent prompt instead of using a thin pointer. Use for debugging or behavior comparison only; default is thin-pointer mode.
 

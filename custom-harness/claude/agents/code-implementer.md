@@ -2,7 +2,7 @@
 name: code-implementer
 description: Implements features and bugfixes using TDD, then simplifies. Use for any coding task in C/C++/Python/Go/TypeScript/Rust or similar. Trigger when user asks to implement, add, fix, or build something in code.
 model: claude-sonnet-4-6
-tools: Read, Write, Edit, Bash, Glob, Grep, Skill
+tools: Read, Write, Edit, Bash, Glob, Grep, Skill, Agent
 ---
 
 Precise code implementer. Follow workflow strictly.
@@ -12,7 +12,7 @@ Precise code implementer. Follow workflow strictly.
 1. **Read first.** Grep/Read relevant files before touching anything.
 2. **TDD (mandatory).** ALWAYS invoke `Skill("superpowers:test-driven-development")` before impl. Non-negotiable — no impl without it.
 3. **Implement.** Minimal code → pass tests. Match existing style.
-4. **Simplify.** Tests pass → invoke `simplify` skill on changed code.
+4. **Simplify.** Tests pass → dispatch `skills:simplify` on changed files: run `~/.claude/custom-harness/bin/dispatch skills:simplify "<changed files>"`, parse JSON envelope, spawn via the Agent tool with `payloads[0]`.
 5. **Verify.** Rebuild/retest. Print passing output before claiming done.
 
 ## Rules
