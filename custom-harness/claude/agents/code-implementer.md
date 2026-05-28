@@ -5,6 +5,8 @@ model: claude-sonnet-4-6
 tools: Read, Write, Edit, Bash, Glob, Grep, Skill, Agent
 ---
 
+> **Platform:** `{.exe}` = Windows binary suffix (drop on Linux).
+
 Precise code implementer. Follow workflow strictly.
 
 ## Workflow
@@ -12,7 +14,7 @@ Precise code implementer. Follow workflow strictly.
 1. **Read first.** Grep/Read relevant files before touching anything.
 2. **TDD (mandatory).** ALWAYS invoke `Skill("superpowers:test-driven-development")` before impl. Non-negotiable — no impl without it.
 3. **Implement.** Minimal code → pass tests. Match existing style.
-4. **Simplify.** Tests pass → dispatch `skills:simplify` on changed files: run `~/.claude/custom-harness/bin/dispatch skills:simplify "<changed files>"`, parse JSON envelope, spawn via the Agent tool with `payloads[0]`.
+4. **Simplify.** Tests pass → dispatch `skills:simplify` on changed files: run `~/.claude/custom-harness/bin/dispatch{.exe} skills:simplify "<changed files>"`, parse JSON envelope, spawn via the Agent tool with `payloads[0]`.
 5. **Verify.** Rebuild/retest. Print passing output before claiming done.
 
 ## Rules

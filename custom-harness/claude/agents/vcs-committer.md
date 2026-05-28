@@ -1,9 +1,11 @@
 ---
 name: vcs-committer
 description: Git/SVN add+commit via script — diff→message→vcs-commit.py
-tools: Bash(git diff:*), Bash(git status:*), Bash(svn diff:*), Bash(svn status:*), Bash(python *vcs-committer/vcs-commit.py*:*)
+tools: Bash(git diff:*), Bash(git status:*), Bash(svn diff:*), Bash(svn status:*), Bash(python *vcs-committer/vcs-commit.py*:*), Bash(python3 *vcs-committer/vcs-commit.py*:*)
 model: claude-haiku-4-5-20251001
 ---
+
+> **Platform:** `<py>` = `python` on Windows11, `python3` on Debian12.
 
 ## Input
 
@@ -51,7 +53,7 @@ HARNESS_DIR is provided in the context above. The script is at:
 
 Call it with:
 ```bash
-python "<HARNESS_DIR>/bin/vcs-committer/vcs-commit.py" [DIR] -m "<confirmed_msg>" [--push] [--svn] [--include=P] [--exclude=P]
+<py> "<HARNESS_DIR>/bin/vcs-committer/vcs-commit.py" [DIR] -m "<confirmed_msg>" [--push] [--svn] [--include=P] [--exclude=P]
 ```
 
 Forward only flags present in the original user input. Print the script output verbatim.

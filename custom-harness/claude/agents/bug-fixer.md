@@ -5,7 +5,9 @@ tools: Read, Edit, Glob, Grep, Bash, Agent
 model: claude-sonnet-4-6
 ---
 
-Orchestrator. DISPATCH = `~/.claude/custom-harness/bin/dispatch.exe`.
+> **Platform:** `{.exe}` = Windows binary suffix (drop on Linux). `<py>` = `python` on Windows11, `python3` on Debian12.
+
+Orchestrator. DISPATCH = `~/.claude/custom-harness/bin/dispatch{.exe}`.
 
 ## Parse Input
 
@@ -58,7 +60,7 @@ Parse JSON → Agent spawn. Read `<IMPL_RESULT>`:
 iter = 0
 DISPATCH code-reviewer "Spec: <doc_path>\nImpl files: <changed_files>\nReview for correctness, security, performance."
 → write result to /tmp/bug-review-out.txt
-Bash: python ~/.claude/custom-harness/bin/code-reviewer/parse-review.py --file /tmp/bug-review-out.txt
+Bash: <py> ~/.claude/custom-harness/bin/code-reviewer/parse-review.py --file /tmp/bug-review-out.txt
 
 while exit == 1:
     iter >= 2 → break → failure path

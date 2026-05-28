@@ -5,6 +5,8 @@ model: claude-sonnet-4-6
 tools: Read, Edit, Glob, Grep, Bash, Agent
 ---
 
+> **Platform:** `{.exe}` = Windows binary suffix (drop on Linux).
+
 Focused executor. Read files → simplify → edit → test → report. Never add features; never change behavior.
 
 ## Input
@@ -22,7 +24,7 @@ Read every target file in full. Required before Skill call so simplify sees curr
 **MANDATORY:** dispatch the `simplify` skill — skipping is a contract violation.
 
 ```bash
-~/.claude/custom-harness/bin/dispatch skills:simplify "<target files space-separated>"
+~/.claude/custom-harness/bin/dispatch{.exe} skills:simplify "<target files space-separated>"
 ```
 
 Parse stdout JSON envelope. Spawn the Agent tool once with `payloads[0]`. The dispatched simplify

@@ -5,7 +5,9 @@ model: claude-sonnet-4-6
 tools: Read, Glob, Grep, Bash, Agent
 ---
 
-Orchestrator. DISPATCH = `~/.claude/custom-harness/bin/dispatch`.
+> **Platform:** `{.exe}` = Windows binary suffix (drop on Linux). `<py>` = `python` on Windows11, `python3` on Debian12.
+
+Orchestrator. DISPATCH = `~/.claude/custom-harness/bin/dispatch{.exe}`.
 
 ## Phase 0 — Parse Input
 
@@ -90,7 +92,7 @@ Write reviewer output to `/tmp/simplify-review-out.txt`.
 
 Bash:
 ```
-python ~/.claude/custom-harness/bin/code-reviewer/parse-review.py --file /tmp/simplify-review-out.txt
+<py> ~/.claude/custom-harness/bin/code-reviewer/parse-review.py --file /tmp/simplify-review-out.txt
 ```
 - exit 0 → `verdict=pass`; read counts from stdout JSON
 - exit 1 → `verdict=fail`; capture findings JSON

@@ -5,7 +5,9 @@ tools: Read, Edit, Glob, Grep, Bash, Agent
 model: claude-sonnet-4-6
 ---
 
-Orchestrator. DISPATCH = `python ~/.claude/custom-harness/bin/dispatch.py`.
+> **Platform:** `{.exe}` = Windows binary suffix (drop on Linux). `<py>` = `python` on Windows11, `python3` on Debian12.
+
+Orchestrator. DISPATCH = `~/.claude/custom-harness/bin/dispatch{.exe}`.
 
 ## Parse Input
 
@@ -35,7 +37,7 @@ Parse JSON → Agent spawn. Write agent result text to `/tmp/review-out.txt`.
 
 Bash:
 ```
-python ~/.claude/custom-harness/bin/code-reviewer/parse-review.py --file /tmp/review-out.txt
+<py> ~/.claude/custom-harness/bin/code-reviewer/parse-review.py --file /tmp/review-out.txt
 ```
 - exit 0 → verdict=pass; read JSON from stdout for counts
 - exit 1 → verdict=fail; read JSON from stdout (contains crit/maj counts and findings)
@@ -57,7 +59,7 @@ While parse-review.py exited 1 (verdict=fail):
   DISPATCH code-reviewer "Spec:\n<spec>\n\nImpl files: <changed_files>\n\nReview fixed code."
   ```
   Parse JSON → Agent spawn. Write result to `/tmp/review-out.txt`.
-  Bash: `python ~/.claude/custom-harness/bin/code-reviewer/parse-review.py --file /tmp/review-out.txt`
+  Bash: `<py> ~/.claude/custom-harness/bin/code-reviewer/parse-review.py --file /tmp/review-out.txt`
   exit 0 → loop done. exit 1 → continue. exit 5 → abort "reviewer contract violation".
 - `iter++`
 
@@ -67,7 +69,7 @@ Only if `spec_path` exists:
 
 Bash:
 ```
-python ~/.claude/custom-harness/bin/dev-cycle/task-status.py \
+<py> ~/.claude/custom-harness/bin/dev-cycle/task-status.py \
   --spec <spec_path> --to done
 ```
 
