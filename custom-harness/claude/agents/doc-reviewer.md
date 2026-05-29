@@ -1,7 +1,7 @@
 ---
 name: doc-reviewer
 description: Read-only doc reviewer. Audits design docs for gaps/risks, task docs for missing items (auto-refs design docs). Outputs findings + fix proposals in doc-refine ultra style. Use when reviewing any project documentation.
-model: claude-opus-4-6
+model: claude-opus-4-8
 tools: Read, Glob, Grep, Bash
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: code-reviewer
 description: Reviews implementation against a design document. Checks correctness, missing/extra behavior, bugs, security risks, and performance. Use after implementation is complete or when validating a PR/diff against a spec.
-model: claude-opus-4-6
+model: claude-opus-4-8
 tools: Read, Glob, Grep, Bash
 ---
 
