@@ -232,7 +232,7 @@ def _interactive_list(
             sys.stdout.write(f" {pointer} {mark} {items[i]}\n")
             lines += 1
         if n > visible_rows:
-            bar_pos = int(visible_rows * cursor / max(n - 1, 1))
+            bar_pos = int((visible_rows - 1) * cursor / max(n - 1, 1))
             bar_chars = ["─"] * visible_rows
             bar_chars[bar_pos] = "█"
             sys.stdout.write(f"  {''.join(bar_chars)}\n")

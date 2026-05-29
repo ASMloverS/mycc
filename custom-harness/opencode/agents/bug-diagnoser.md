@@ -1,5 +1,5 @@
 ---
-description: Diagnoses bug root cause via systematic debugging. Use when you need to find why something is broken without fixing it. Input: bug description, error log, or bug doc path. Output: structured root cause analysis.
+description: "Diagnoses bug root cause via systematic debugging. Use when you need to find why something is broken without fixing it. Input: bug description, error log, or bug doc path. Output: structured root cause analysis."
 mode: subagent
 model: zai-coding-plan/glm-5.1
 permission:
