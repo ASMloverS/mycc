@@ -324,6 +324,10 @@ def _iter_items(directory: Path, skip: set[str]) -> Iterator[Path]:
 def _scan_harness(
     src_root: Path, src_key: str, skip: set[str], cats: dict
 ) -> None:
+    flat_agents = src_root / "agents"
+    if flat_agents.is_dir():
+        for p in _iter_items(flat_agents, skip):
+            cats.setdefault("agents", []).append((p, src_key, "agents", True))
     ch = src_root / "custom-harness"
     if not ch.exists():
         return
