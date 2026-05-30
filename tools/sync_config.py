@@ -683,6 +683,8 @@ def get_agent_install_target(
     agent_path: Path, platform: str, sources: dict[str, Path]
 ) -> Path:
     """计算 agent 安装目标路径"""
+    if platform == "opencode":
+        return sources[platform] / "agents" / agent_path.name
     return sources[platform] / "custom-harness" / "agents" / agent_path.name
 
 
