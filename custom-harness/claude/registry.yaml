@@ -18,5 +18,6 @@ skills:
   torvalds-doctrine: { path: skills/torvalds-doctrine/SKILL.md, desc: "Aggressive AI coding guidelines inspired by Linus Torvalds. Enforce data structure supremacy, simple code, proof over hand-waving, and a bogus-shit detector." }
   code-simplify:     { path: skills/code-simplify/SKILL.md,     desc: "Parallel code review and cleanup: 3 subagents (reuse/quality/efficiency) run in parallel, main agent merges and applies findings sequentially, non-interactive." }
   simplify:          { path: skills/simplify/SKILL.md,          desc: "Upstream-style review-and-fix cleanup: 3 reviewer subagents (reuse/quality/efficiency) in parallel, then apply fixes directly." }
+  html-artifacts:    { path: skills/html-artifacts/SKILL.md,    desc: "Produce a self-contained HTML artifact for docs, plans, diagrams, reports, slides, or any content benefiting from layout/color/interactivity." }
 
 commands: {}
