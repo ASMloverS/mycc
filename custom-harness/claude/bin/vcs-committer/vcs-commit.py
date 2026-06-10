@@ -35,13 +35,15 @@ def die(msg, code=1):
 def run(cmd, cwd, dry=False):
     print(f"+ {' '.join(str(c) for c in cmd)}")
     if dry: return ""
-    r = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True)
+    r = subprocess.run(cmd, cwd=cwd, text=True, capture_output=True,
+                       encoding="utf-8", errors="replace")
     if r.stdout: print(r.stdout, end="")
     if r.returncode != 0: print(r.stderr, file=sys.stderr); die(f"failed: {cmd[0]}", 4)
     return r.stdout
 
 def query(cmd, cwd):
-    return subprocess.run(cmd, cwd=cwd, text=True, capture_output=True).stdout
+    return subprocess.run(cmd, cwd=cwd, text=True, capture_output=True,
+                          encoding="utf-8", errors="replace").stdout
 
 def parse_args(argv):
     args, msg, push, svn_f, dry, inc, exc, d = argv[1:], None, False, False, False, [], [], "."
