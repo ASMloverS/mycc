@@ -1,7 +1,7 @@
 ---
 description: Implements features and bugfixes using TDD, then simplifies. Use for any coding task. Trigger when user asks to implement, add, fix, or build something.
 mode: subagent
-model: zai-coding-plan/glm-4.5-air
+model: zai-coding-plan/glm-5.2
 permission:
   edit: allow
   bash: allow

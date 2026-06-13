@@ -1,7 +1,7 @@
 ---
 description: "Full bug fix pipeline. Diagnoses root cause, fixes via TDD, verifies, cleans, reviews, documents. Input: bug description, error log, or bug doc path. Use when encountering bugs, test failures, or unexpected behavior."
 mode: subagent
-model: zai-coding-plan/glm-5.1
+model: zai-coding-plan/glm-5.2
 permission:
   edit: allow
   bash: allow

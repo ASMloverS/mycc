@@ -1,7 +1,7 @@
 ---
 description: Orchestrator that dispatches spec-matcher, bug-detector, and code-verifier to review implementation against task requirements. Read-only, never edits code or docs. Use after implementation is complete or when validating a PR/diff.
 mode: subagent
-model: zai-coding-plan/glm-4.5-air
+model: zai-coding-plan/glm-5.2
 permission:
   edit: deny
   bash: allow

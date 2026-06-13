@@ -1,7 +1,7 @@
 ---
 description: "Plans implementation tasks by scanning codebase, finding reusable utilities, and producing structured plans. Use before writing code. Input: task description. Output: plan JSON or UNCLEAR question."
 mode: subagent
-model: zai-coding-plan/glm-5.1
+model: zai-coding-plan/glm-5.2
 permission:
   edit: deny
   bash: allow

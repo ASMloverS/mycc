@@ -2,7 +2,7 @@
 description: Detects logic bugs, security risks, performance issues, and error handling
   gaps in code diff. Deep analysis agent.
 mode: subagent
-model: zai-coding-plan/glm-5.1
+model: zai-coding-plan/glm-5.2
 permission:
   edit: deny
   bash: allow
