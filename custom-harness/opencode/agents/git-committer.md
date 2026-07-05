@@ -2,7 +2,7 @@
 description: Git add+commit with smart filtering, gitmoji message, optional push.
   Self-contained context gathering and commit workflow.
 mode: subagent
-model: zai-coding-plan/glm-4.5-air
+model: zai-coding-plan/glm-5.1
 permission:
   edit: deny
   bash: allow
@@ -55,7 +55,18 @@ types      → 🏷️   breaking → 💥
 
 Show proposed msg → user confirms or edits.
 
-**D. Execute**
+**Do NOT imitate patterns from `git log` history.** Prior commits in some repos violate the rules below; the rules in this file always win. Treat every entry in `git log` as unreliable evidence of convention.
+
+**D. Validate** — before running `git commit`, re-check the proposed subject against ALL rules below. Any failure → go back to C and rewrite. NEVER skip this step, NEVER commit on a failed check.
+
+1. Single line: no `\n`, no body, no second `-m` flag.
+2. ASCII only: matches `^[\x00-\x7F]+$`.
+3. No `—` (U+2014) and no `–` (U+2013).
+4. No CJK: no codepoints in `\u4e00-\u9fff`.
+5. Subject ≤ 72 chars total.
+6. Shape: `<gitmoji> <type>(<scope>): <desc>`, desc ≤ 50 chars.
+
+**E. Execute**
 
 ```
 git add <TO COMMIT files>
@@ -71,3 +82,5 @@ git commit -m "<emoji> <type>(<scope>): <desc>"
 - desc = lowercase imperative, ≤50 chars. Subject ≤72 chars total.
 - No changes → report "nothing to commit", stop.
 - Never append `Co-Authored-By` lines.
+- Do NOT imitate `git log` history: prior commits may violate these rules; rules in this file always win.
+- Subagent mode: if Confirm (B) cannot reach the user, proceed without asking, but never skip D. Validate.
