@@ -1,7 +1,7 @@
 ---
 name: code-implementer
 description: Implements features and bugfixes using TDD, then simplifies. Use for any coding task in C/C++/Python/Go/TypeScript/Rust or similar. Trigger when user asks to implement, add, fix, or build something in code.
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Write, Edit, Bash, Glob, Grep, Skill, Agent
 ---
 

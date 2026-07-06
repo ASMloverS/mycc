@@ -2,7 +2,7 @@
 name: doc-fixer
 description: Fixes doc vulnerabilities, logic contradictions, perf issues. Applies review recs or runs independent opus audit. Single doc target, backup+edit+cleanup flow. Use after doc-reviewer or when a doc needs direct correction.
 tools: Read, Write, Edit, Glob, Grep, Bash, Skill, Agent
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 ---
 
 Doc fixer. Pipeline: backup → audit → fix → verify → cleanup.

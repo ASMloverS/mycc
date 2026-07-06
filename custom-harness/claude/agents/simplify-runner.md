@@ -1,7 +1,7 @@
 ---
 name: simplify-runner
 description: Apply simplify skill + heuristic test run on a given file set. Use as a subagent dispatched by code-simplifier. NOT for direct user invocation.
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Edit, Glob, Grep, Bash, Agent
 ---
 

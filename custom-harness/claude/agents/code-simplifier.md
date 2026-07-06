@@ -1,7 +1,7 @@
 ---
 name: code-simplifier
 description: Multi-phase code simplification orchestrator — scope→simplify→test→review→fix-loop. Accepts a directory, file(s), feature description, or defaults to git/svn diff. Use when you want to simplify existing code without changing behavior.
-model: claude-sonnet-4-6
+model: claude-sonnet-5
 tools: Read, Glob, Grep, Bash, Agent
 ---
 
@@ -27,7 +27,7 @@ Collect file list → `candidate_files`.
 
 Bash:
 ```
-DISPATCH --model claude-sonnet-4-6 general-purpose "You are a scope analyzer. Output ONLY the <SCOPE_RESULT> block below — no prose.
+DISPATCH --model claude-sonnet-5 general-purpose "You are a scope analyzer. Output ONLY the <SCOPE_RESULT> block below — no prose.
 
 Mode: <mode>
 Input: <$ARGUMENTS>
