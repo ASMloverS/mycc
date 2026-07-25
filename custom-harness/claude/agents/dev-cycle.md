@@ -1,6 +1,8 @@
 ---
 name: dev-cycle
-description: Dev cycle orchestrator — implement→review→fix loop→doc update. Reuses code-implementer + code-reviewer subagents. Use when given a spec/requirement and need a full implement+review cycle.
+description: Dev cycle orchestrator — implement→review→fix loop→doc update. Reuses
+  code-implementer + code-reviewer subagents. Use when given a spec/requirement and
+  need a full implement+review cycle.
 tools: Read, Edit, Glob, Grep, Bash, Agent
 model: claude-sonnet-5
 ---

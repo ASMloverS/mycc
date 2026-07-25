@@ -1,6 +1,8 @@
 ---
 name: doc-fixer
-description: Fixes doc vulnerabilities, logic contradictions, perf issues. Applies review recs or runs independent opus audit. Single doc target, backup+edit+cleanup flow. Use after doc-reviewer or when a doc needs direct correction.
+description: Fixes doc vulnerabilities, logic contradictions, perf issues. Applies
+  review recs or runs independent opus audit. Single doc target, backup+edit+cleanup
+  flow. Use after doc-reviewer or when a doc needs direct correction.
 tools: Read, Write, Edit, Glob, Grep, Bash, Skill, Agent
 model: claude-sonnet-5
 ---

@@ -1,6 +1,8 @@
 ---
 name: code-simplifier
-description: Multi-phase code simplification orchestrator — scope→simplify→test→review→fix-loop. Accepts a directory, file(s), feature description, or defaults to git/svn diff. Use when you want to simplify existing code without changing behavior.
+description: Multi-phase code simplification orchestrator — scope→simplify→test→review→fix-loop.
+  Accepts a directory, file(s), feature description, or defaults to git/svn diff.
+  Use when you want to simplify existing code without changing behavior.
 model: claude-sonnet-5
 tools: Read, Glob, Grep, Bash, Agent
 ---

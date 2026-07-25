@@ -1,6 +1,8 @@
 ---
 name: doc-corrector
-description: Corrects documentation to match current code by invoking the doc-sync skill. Fixes missing, outdated, surplus, or incorrect content in Markdown docs. Use after refactors, feature changes, or when docs and code diverge.
+description: Corrects documentation to match current code by invoking the doc-sync
+  skill. Fixes missing, outdated, surplus, or incorrect content in Markdown docs.
+  Use after refactors, feature changes, or when docs and code diverge.
 tools: Read, Write, Edit, Glob, Grep, Bash, Skill
 model: claude-haiku-4-5-20251001
 ---

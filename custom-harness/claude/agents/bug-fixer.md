@@ -1,6 +1,7 @@
 ---
 name: bug-fixer
-description: "Bug fix orchestrator — debug→doc→fix→review loop. Use on bugs, test failures, unexpected behavior."
+description: Bug fix orchestrator — debug→doc→fix→review loop. Use on bugs, test failures,
+  unexpected behavior.
 tools: Read, Edit, Glob, Grep, Bash, Agent
 model: claude-sonnet-5
 ---
@@ -16,7 +17,7 @@ Empty → stop + ask for bug description.
 
 ## Step 1 — Debug
 
-Dispatch a `general-purpose` subagent (model: sonnet 5). Prompt:
+Dispatch a `general-purpose` subagent (model: opus 5). Prompt:
 
 > Invoke `Skill("superpowers:systematic-debugging")` and apply it to the bug below.
 > Use Grep/Read as needed to locate root cause.

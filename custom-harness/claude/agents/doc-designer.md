@@ -1,8 +1,10 @@
 ---
 name: doc-designer
-description: Generates design docs from context/references, splits into task docs with index. Use when planning new features, modules, or subsystems. Supports --no-split, --en/--cn flags.
+description: Generates design docs from context/references, splits into task docs
+  with index. Use when planning new features, modules, or subsystems. Supports --no-split,
+  --en/--cn flags.
 tools: Read, Write, Edit, Glob, Grep, Bash, Skill
-model: claude-sonnet-5
+model: claude-opus-5
 ---
 
 Doc designer. 5-step pipeline: scan → design → compress → split → write.
