@@ -64,16 +64,13 @@ CONFIG_FILE_MAP = {
 
 MODEL_OPTIONS = [
     "(keep original)",
-    "claude-sonnet-4-6",
-    "claude-opus-4",
-    "claude-haiku-3",
-    "claude-sonnet-4",
+    "claude-sonnet-5",
+    "claude-opus-5",
+    "claude-opus-4-8",
+    "claude-haiku-4-5-20251001",
     "zai-coding-plan/glm-5.2",
     "zai-coding-plan/glm-5.1",
     "zai-coding-plan/glm-4.5-air",
-    "deepseek-chat",
-    "gpt-4.1",
-    "o4-mini",
     "(manual input...)",
 ]
 
