@@ -449,10 +449,9 @@ def _check_overwrite(dst: Path, new_content: str) -> bool:
     if not dst.exists():
         return True
     existing = dst.read_text(encoding="utf-8")
-    if existing == new_content:
-        print(f"  跳过 (内容相同): {dst}")
-        return False
-    if not custom_confirm(f"目标已存在: {dst}\n是否覆盖？", default=False):
+    if existing != new_content and not custom_confirm(
+        f"目标已存在: {dst}\n是否覆盖？", default=False
+    ):
         print(f"  跳过: {dst}")
         return False
     return True
