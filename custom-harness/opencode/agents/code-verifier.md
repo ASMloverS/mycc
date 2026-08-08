@@ -1,7 +1,8 @@
 ---
-description: "Verifies implementation by running tests, build, lint, and typecheck. All must pass. Input: impl files + test files. Output: pass/fail with evidence."
+description: 'Verifies implementation by running tests, build, lint, and typecheck.
+  All must pass. Input: impl files + test files. Output: pass/fail with evidence.'
 mode: subagent
-model: zai-coding-plan/glm-5.1
+model: zai-coding-plan/glm-5.2
 permission:
   edit: deny
   bash: allow

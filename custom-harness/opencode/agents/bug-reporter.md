@@ -1,7 +1,9 @@
 ---
-description: "Writes structured bug documentation to docs/bugs/ in Chinese. Use after a bug has been successfully fixed. Input: root cause, fix summary, related files, severity, test paths. Output: bug doc path."
+description: 'Writes structured bug documentation to docs/bugs/ in Chinese. Use after
+  a bug has been successfully fixed. Input: root cause, fix summary, related files,
+  severity, test paths. Output: bug doc path.'
 mode: subagent
-model: zai-coding-plan/glm-4.5-air
+model: zai-coding-plan/glm-4.7
 permission:
   edit: allow
   bash: allow

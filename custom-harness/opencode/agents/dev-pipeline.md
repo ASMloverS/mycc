@@ -5,7 +5,7 @@ description: >
   task status emoji. Pass a full .md file path. Dispatches code-implementer,
   code-reviewer, code-simplifier, and code-verifier sequentially.
 mode: subagent
-model: zai-coding-plan/glm-5.1
+model: zai-coding-plan/glm-5.2
 permission:
   edit: allow
   bash: allow

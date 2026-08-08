@@ -1,5 +1,7 @@
 ---
-description: "Implements code via TDD red-green cycle. Writes failing test first, then minimal implementation. Input: plan JSON from task-planner. Output: impl files + test files."
+description: 'Implements code via TDD red-green cycle. Writes failing test first,
+  then minimal implementation. Input: plan JSON from task-planner. Output: impl files
+  + test files.'
 mode: subagent
 model: zai-coding-plan/glm-5.2
 permission:
