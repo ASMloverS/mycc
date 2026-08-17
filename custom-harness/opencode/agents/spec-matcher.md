@@ -2,7 +2,7 @@
 description: Matches task requirements against code diff to check spec coverage. Reports
   COVERED/PARTIAL/MISSING/EXTRA per requirement.
 mode: subagent
-model: zai-coding-plan/glm-5.2
+model: zai-coding-plan/glm-5.3
 permission:
   edit: deny
   bash: allow

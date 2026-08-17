@@ -3,7 +3,7 @@ description: 'Diagnoses bug root cause via systematic debugging. Use when you ne
   to find why something is broken without fixing it. Input: bug description, error
   log, or bug doc path. Output: structured root cause analysis.'
 mode: subagent
-model: zai-coding-plan/glm-5.2
+model: zai-coding-plan/glm-5.3
 permission:
   edit: allow
   bash: allow

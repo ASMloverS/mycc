@@ -3,7 +3,7 @@ description: Reviews Markdown documents for design vulnerabilities, performance 
   and code consistency. Supports single-file or directory batch review with parallel
   subagent dispatch. Invoke via @doc-reviewer with a .md file path or directory path.
 mode: subagent
-model: zai-coding-plan/glm-5.2
+model: zai-coding-plan/glm-5.3
 permission:
   edit: deny
   bash: allow

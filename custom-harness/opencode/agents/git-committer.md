@@ -2,7 +2,7 @@
 description: Git add+commit with smart filtering, gitmoji message, optional push.
   Self-contained context gathering and commit workflow.
 mode: subagent
-model: zai-coding-plan/glm-5.2
+model: zai-coding-plan/glm-5.3
 permission:
   edit: deny
   bash: allow
